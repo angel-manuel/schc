@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include "ast.h"
 #include "lexer.h"
+#include "parser.h"
 
 void usage();
 
@@ -25,10 +27,24 @@ int main(int argc, char *argv[]) {
   yyin = input;
   yyout = stdout;
 
-  int token;
-  while((token = yylex()) != 0) {
-    printf("%-20s %s\n", strtoken(token), yytext);
+  // int token;
+  // while((token = yylex()) != 0) {
+  //   printf("%-20s %s\n", strtoken(token), yytext);
+  // }
+
+  parser_t parser;
+  parser_init(&parser);
+
+  ast_t ast;
+  
+  if (parser_parse(&parser, &ast) == -1) {
+    fprintf(stderr, "Parse error\n");
+    return 1;
   }
+
+  ast_print(&ast, stdout);
+
+  parser_destroy(&parser);
 
   fclose(input);
 
