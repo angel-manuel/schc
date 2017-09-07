@@ -25,12 +25,9 @@ void ast_print_indent(const ast_t *ast, FILE *fp, int indent) {
             ast_print_indent(ast->fn_appl.fn, fp, indent + 2 + INDENT);
             fprintf(fp, "\n");
 
-            fprintf(fp, "%*s  args = [\n", indent, "");
-            for (i = 0; i < ast->fn_appl.args.len; ++i) {
-                ast_print_indent((const ast_t*)vector_get_ref(&ast->fn_appl.args, i), fp, indent + 2 + INDENT);
-                fprintf(fp, ",\n");
-            }
-            fprintf(fp, "%*s  ]\n", indent, "");
+            fprintf(fp, "%*s  arg = [\n", indent, "");
+            ast_print_indent(ast->fn_appl.arg, fp, indent + 2 + INDENT);
+            fprintf(fp, "\n");
 
             fprintf(fp, "%*s}", indent, "");
             break;

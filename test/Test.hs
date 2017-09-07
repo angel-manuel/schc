@@ -2,7 +2,7 @@
 {- Block comment -}
 -- Line comment
 
-facr start end = if 1 then 666 else 777 {- if start >= end - 1 then start else (facr start h) * (facr h end)
+facr start end = if 1 then start else facr 3 (2 + 2) {- if start >= end - 1 then start else (facr start h) * (facr h end)
     where
         h = start + div (end - start) 2
 

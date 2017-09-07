@@ -17,9 +17,10 @@ int module(parser_t *parser, ast_t *node);
         int function(parser_t *parser, char *decl_name, ast_t *node);
         int value(parser_t *parser, char *decl_name, ast_t *node);
     int expression(parser_t *parser, ast_t *node);
-        int if_exp(parser_t *parser, ast_t *node);
-        // int fn_appl_or_var(parser_t *parser, ast_t *node);
-        int lit(parser_t *parser, ast_t *node);
+        int aexpression(parser_t *parser, ast_t *node);
+            int if_exp(parser_t *parser, ast_t *node);
+            int var(parser_t *parser, ast_t *node);
+            int lit(parser_t *parser, ast_t *node);
 
 int parser_init(parser_t *parser) {
     assert(parser != NULL);
@@ -170,6 +171,35 @@ int expression(parser_t *parser, ast_t *node) {
     assert(parser != NULL);
     assert(node != NULL);
 
+    int res, tmp;
+
+    TRYP(res, aexpression(parser, node));
+
+    ast_t *rhs;
+    TRYCR(rhs, (ast_t*)malloc(sizeof(ast_t)), NULL, 0);
+    while ((tmp = aexpression(parser, rhs))) {
+        res = tmp;
+
+        ast_t *lhs;
+        TRYCR(lhs, (ast_t*)malloc(sizeof(ast_t)), NULL, 0);
+        memcpy(lhs, node, sizeof(ast_t));
+
+        ast_fn_appl_t *fn_appl = &node->fn_appl;
+        fn_appl->fn = lhs;
+        fn_appl->arg = rhs;
+
+        node->rule = AST_FN_APPL;
+        TRYCR(rhs, (ast_t*)malloc(sizeof(ast_t)), NULL, 0);
+    }
+    
+    free(rhs);
+    return res;
+}
+
+int aexpression(parser_t *parser, ast_t *node) {
+    assert(parser != NULL);
+    assert(node != NULL);
+
     int res;
 
     if (accept(parser, '(')) {
@@ -177,7 +207,7 @@ int expression(parser_t *parser, ast_t *node) {
         TRYP(res, accept(parser, ')'));
     } else {
         TRYP(res, if_exp(parser, node)
-                // || fn_appl_or_var(parser, node)
+                || var(parser, node)
                 || lit(parser, node));
     }
 
@@ -211,17 +241,48 @@ int if_exp(parser_t *parser, ast_t *node) {
     return res;
 }
 
+int var(parser_t *parser, ast_t *node) {
+    assert(parser != NULL);
+    assert(node != NULL);
+
+    int res;
+
+    TRYP(res, accept(parser, TOK_VARID));
+    node->var.name = parser_get_text(parser);
+
+    node->rule = AST_VAR;
+    return res;
+}
+
 // int fn_appl_or_var(parser_t *parser, ast_t *node) {
 //     assert(parser != NULL);
 //     assert(node != NULL);
 
 //     int res;
 
-//     TRYP(res, accept(parser, TOK_VARID));
+//     if(!accept(parser, TOK_VARID)) {
+//         return fn_appl(parser, node, NULL);
+//     }
 
 //     char *name = parser_get_text(parser);
 
-//     return res;
+//     ast_t arg;
+//     if (expression(parser, &arg)) {
+//         ast_fn_appl_t *fn_appl = &node->fn_appl; 
+
+//         do {
+
+//         } while (expression(parser, &arg));
+
+//         node->rule = fn_appl;
+//         return res;
+//     } else {
+//         ast_var_t *var = &node->var;
+//         var->name = name;
+
+//         node->rule = AST_VAR;
+//         return res;
+//     }
 // }
 
 int lit(parser_t *parser, ast_t *node) {

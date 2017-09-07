@@ -43,7 +43,7 @@ void ast_print(const ast_t *ast, FILE *fp);
 
 typedef struct ast_fn_appl_ {
     ast_t *fn;
-    vector_t/*ast_t**/ args;
+    ast_t *arg;
 } ast_fn_appl_t;
 
 typedef struct ast_if_ {
