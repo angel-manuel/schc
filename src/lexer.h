@@ -7,6 +7,8 @@ extern int   yylex();
 extern char *yytext;
 extern FILE *yyin;
 extern FILE *yyout;
+extern int  yylineno;
+extern int  yycolumn;
 
 typedef enum token_ {
   TOK_ERROR = -1,
@@ -15,7 +17,12 @@ typedef enum token_ {
   TOK_CONID,
   TOK_NUMBER,
   TOK_OP,
-  TOK_NEWLINE,
+  
+  TOK_OP_RANGE,
+  TOK_OP_HASTYPE,
+  TOK_OP_L_ARROW,
+  TOK_OP_R_ARROW,
+  TOK_OP_R_FAT_ARROW,
 
   TOK_CASE,
   TOK_CLASS,
@@ -39,11 +46,6 @@ typedef enum token_ {
   TOK_THEN,
   TOK_TYPE,
   TOK_WHERE,
-  TOK_RANGE,
-  TOK_HASTYPE,
-  TOK_L_ARROW,
-  TOK_R_ARROW,
-  TOK_R_FAT_ARROW,
 } token_t;
 
 const char *strtoken(int token);

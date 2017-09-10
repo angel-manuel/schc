@@ -82,6 +82,7 @@ void *vector_push_back(vector_t *vector, void *item_ptr) {
     assert(item_ptr != NULL);
 
     void *dst_mem = vector_alloc_elem(vector);
+    if (dst_mem == NULL) { return NULL; }
     memcpy(dst_mem, item_ptr, vector->elem_size);
 
     return dst_mem;

@@ -27,7 +27,7 @@ LINE_COMMENT --.*
 {LINE_COMMENT}
 [ \t]*
 
-\n|\r\n|\n\r  { yycolumn = 0; return TOK_NEWLINE; }
+\n|\r\n|\n\r  { yycolumn = 0; }
 
 "case"		{ return TOK_CASE; }
 "class"		{ return TOK_CLASS; }
@@ -51,11 +51,7 @@ LINE_COMMENT --.*
 "then"		{ return TOK_THEN; }
 "type"		{ return TOK_TYPE; }
 "where"		{ return TOK_WHERE; }
-".."		{ return TOK_RANGE; }
-"::"		{ return TOK_HASTYPE; }
-"<-"		{ return TOK_L_ARROW; }
-"->"		{ return TOK_R_ARROW; }
-"=>"		{ return TOK_R_FAT_ARROW; }
+
 
 "("         { return '('; }
 ")"         { return ')'; }
@@ -68,11 +64,23 @@ LINE_COMMENT --.*
 "}"         { return '}'; }
 "_"         { return '_'; }
 "="         { return '='; }
+"~"         { return '~'; }
+"."         { return '.'; }
+
+
+"-"         { return '-'; }
+":"         { return ':'; }
+"="		    { return '='; }
 "\\"        { return '\\'; }
 "|"         { return '|'; }
 "@"         { return '@'; }
-"~"         { return '~'; }
-"."         { return '.'; }
+
+".."		{ return TOK_OP_RANGE; }
+"::"		{ return TOK_OP_HASTYPE; }
+"<-"		{ return TOK_OP_L_ARROW; }
+"->"		{ return TOK_OP_R_ARROW; }
+"=>"		{ return TOK_OP_R_FAT_ARROW; }
+
 
 {VARID} {
     return TOK_VARID;

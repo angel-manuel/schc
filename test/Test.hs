@@ -1,8 +1,21 @@
+module Main (
+    facr,
+    fac,
+    main
+) where
 
 {- Block comment -}
 -- Line comment
 
-facr start end = if 1 then start else facr 3 (2 + 2) {- if start >= end - 1 then start else (facr start h) * (facr h end)
+test x = x + y
+    where
+        y = x * 2
+
+-- main :: IO ()
+main = putStrLn (show (fac (6 :: Int)))
+
+-- facr :: Int -> Int -> Int
+facr start end = if start >= end - 1 then start else (facr start h) * (facr h end)
     where
         h = start + div (end - start) 2
 
@@ -10,8 +23,8 @@ facr start end = if 1 then start else facr 3 (2 + 2) {- if start >= end - 1 then
 fac n = facr 1 (n + 1)
 
 -- main :: IO ()
-main = do
-    line <- getLine
-    let n = (read line) :: Int
-    let res = fac n
-    putStrLn (show res) -}
+-- main = do
+--     line <- getLine
+--     let n = (read line) :: Int
+--     let res = fac n
+--     putStrLn (show res) -}

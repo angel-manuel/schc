@@ -38,7 +38,8 @@ int main(int argc, char *argv[]) {
   ast_t ast;
   
   if (parser_parse(&parser, &ast) == -1) {
-    fprintf(stderr, "Parse error\n");
+    fprintf(stderr, "Parse error(%d, %d): %s unexpected\n",
+      yylineno, yycolumn, strtoken(parser.token));
     return 1;
   }
 
