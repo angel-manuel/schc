@@ -7,19 +7,15 @@ module Main (
 {- Block comment -}
 -- Line comment
 
-test x = x + y
-    where
-        y = x * 2
-
 -- main :: IO ()
-main = putStrLn (show (fac (6 :: Int)))
+main = putStrLn (show (fac 6))
 
--- facr :: Int -> Int -> Int
+facr :: Int -> Int -> Int
 facr start end = if start >= end - 1 then start else (facr start h) * (facr h end)
     where
         h = start + div (end - start) 2
 
--- fac :: Int -> Int
+fac :: Int -> Int
 fac n = facr 1 (n + 1)
 
 -- main :: IO ()

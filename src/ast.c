@@ -190,10 +190,22 @@ void ast_print_indent(const ast_t *node, FILE *fp, int indent) {
             fprintf(fp, "%*sVAL_DECL {\n", indent, "");
             fprintf(fp, "%*sname = %s\n", indent + FINDENT, "", val_decl->name);
 
-            fprintf(fp, "%*svalue =\n", indent + FINDENT, "");
+            fprintf(fp, "%*svalue = {\n", indent + FINDENT, "");
             ast_print_indent(val_decl->body, fp, indent + INDENT);
-            fprintf(fp, "\n");
+            fprintf(fp, "\n%*s}\n", indent + FINDENT, "");
 
+            fprintf(fp, "%*s}", indent, "");
+            break;
+        }
+        case AST_HAS_TYPE_DECL:
+        {
+            const ast_has_type_decl_t *has_type_decl = &node->has_type_decl;
+
+            fprintf(fp, "%*sHAS_TYPE {\n", indent, "");
+            fprintf(fp, "%*ssymbol_name = %s\n", indent + FINDENT, "", has_type_decl->symbol_name);
+            fprintf(fp, "%*stype = {\n", indent + FINDENT, "");
+            ast_print_indent(has_type_decl->type_exp, fp, indent + INDENT);
+            fprintf(fp, "\n%*s}\n", indent + FINDENT, "");
             fprintf(fp, "%*s}", indent, "");
             break;
         }

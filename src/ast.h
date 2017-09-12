@@ -120,6 +120,11 @@ typedef struct ast_val_decl_ {
     ast_t *body;
 } ast_val_decl_t;
 
+typedef struct ast_has_type_decl_ {
+    char *symbol_name;
+    ast_t *type_exp;
+} ast_has_type_decl_t;
+
 struct ast_ {
     ast_rule_t rule;
     union {
@@ -137,6 +142,7 @@ struct ast_ {
         ast_fixity_decl_t fixity_decl;
         ast_fn_decl_t fn_decl;
         ast_val_decl_t val_decl;
+        ast_has_type_decl_t has_type_decl;
     };
 };
 

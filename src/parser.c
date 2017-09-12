@@ -14,6 +14,8 @@ int accept(parser_t *parser, int token);
 int accept_exact_indent(parser_t *parser, int token);
 int maybe(int res);
 
+int operator(parser_t *parser);
+
 int root(parser_t *parser, ast_t *node);
 int module(parser_t *parser, ast_t *node);
     int exports(parser_t *parser, ast_t *node);
@@ -22,6 +24,7 @@ int module(parser_t *parser, ast_t *node);
         int declaration(parser_t *parser, ast_t *node);
             int function(parser_t *parser, char *decl_name, ast_t *node);
             int value(parser_t *parser, char *decl_name, ast_t *node);
+            int has_type(parser_t *parser, char *decl_name, ast_t *node);
 
 int expression(parser_t *parser, ast_t *node);
     int unary_neg(parser_t *parser, ast_t *node);
@@ -100,8 +103,9 @@ int accept(parser_t *parser, int token) {
     assert(parser != NULL);
 
     const int *stack_ind = stack_peek(&parser->indent_stack);
+    int indent = yycolumn - strlen(yytext);
 
-    if (stack_ind == NULL || yycolumn > *stack_ind) {
+    if (stack_ind == NULL || indent > *stack_ind) {
         return accept_anywhere(parser, token);
     }
 
@@ -111,14 +115,17 @@ int accept(parser_t *parser, int token) {
 int accept_exact_indent(parser_t *parser, int token) {
     assert(parser != NULL);
 
-    int res, bef_indent = yycolumn;
+    int res;
     const int *stack_ind = stack_peek(&parser->indent_stack);
+    int indent = yycolumn - strlen(yytext);
 
-    if (parser->new_indent_accepted || yycolumn == *stack_ind) {
+    if (parser->new_indent_accepted || indent == *stack_ind) {
+
         TRYP(res, accept_anywhere(parser, token));
 
         if (parser->new_indent_accepted) {
-            stack_push(&parser->indent_stack, &bef_indent);
+            printf("Indent: %d\n", indent);
+            stack_push(&parser->indent_stack, &indent);
             parser->new_indent_accepted = 0;
         }
 
@@ -130,6 +137,42 @@ int accept_exact_indent(parser_t *parser, int token) {
 
 int maybe(int res) {
     return res == 0 ? TOK_NO_TOK : res;
+}
+
+void open_indent(parser_t *parser) {
+    assert(parser != NULL);
+
+    parser->new_indent_accepted = 1;
+}
+
+void close_indent(parser_t *parser) {
+    assert(parser != NULL);
+
+    stack_pop(&parser->indent_stack, NULL);
+
+    int *curr_indent = (int*)stack_peek(&parser->indent_stack);
+    if (curr_indent == NULL) {
+        printf("Indent: NULL\n");
+    } else {
+        printf("Indent: %d\n", *curr_indent);
+    }
+}
+
+// Rules
+
+int operator(parser_t *parser) {
+    return accept(parser, TOK_OP)
+        || accept(parser, '-')
+        || accept(parser, ':')
+        || accept(parser, '=')
+        || accept(parser, '\\')
+        || accept(parser, '|')
+        || accept(parser, '@')
+        || accept(parser, TOK_OP_RANGE)
+        || accept(parser, TOK_OP_HASTYPE)
+        || accept(parser, TOK_OP_L_ARROW)
+        || accept(parser, TOK_OP_R_ARROW)
+        || accept(parser, TOK_OP_R_FAT_ARROW);
 }
 
 int root(parser_t *parser, ast_t *node) {
@@ -160,13 +203,15 @@ int module(parser_t *parser, ast_t *node) {
         TRYP(res, exports(parser, module->exports));
 
         TRYP(res, accept(parser, TOK_WHERE));
-        parser->new_indent_accepted = 1;
+
     }
+
+    open_indent(parser);
 
     TRYCR(module->body, (ast_t*)malloc(sizeof(ast_t)), NULL, 0);
     TRYP(res, body(parser, module->body));
     
-    stack_pop(&parser->indent_stack, NULL);
+    close_indent(parser);
 
     node->rule = AST_MODULE;
     return res;
@@ -237,7 +282,9 @@ int declaration(parser_t *parser, ast_t *node) {
 
     char *decl_name = parser_get_text(parser);
 
-    TRYP(res, function(parser, decl_name, node) || value(parser, decl_name, node));
+    TRYP(res, function(parser, decl_name, node)
+            || value(parser, decl_name, node)
+            || has_type(parser, decl_name, node));
     
     return res;
 }
@@ -268,7 +315,7 @@ int function(parser_t *parser, char *decl_name, ast_t *node) {
     
     if ((tmp = accept(parser, TOK_WHERE))) {
         res = tmp;
-        parser->new_indent_accepted = 1;
+        open_indent(parser);
 
         ast_t *body;
         TRYCR(body, (ast_t*)malloc(sizeof(ast_t)), 0, -1);
@@ -280,7 +327,7 @@ int function(parser_t *parser, char *decl_name, ast_t *node) {
 
         TRYP(res, bindings(parser, &let->bindings));
         
-        stack_pop(&parser->indent_stack, NULL);
+        close_indent(parser);
 
         fn_decl->body->rule = AST_LET;
     } 
@@ -307,7 +354,8 @@ int value(parser_t *parser, char *decl_name, ast_t *node) {
     
     if ((tmp = accept(parser, TOK_WHERE))) {
         res = tmp;
-        parser->new_indent_accepted = 1;
+        
+        open_indent(parser);
 
         ast_t *body;
         TRYCR(body, (ast_t*)malloc(sizeof(ast_t)), 0, -1);
@@ -319,12 +367,32 @@ int value(parser_t *parser, char *decl_name, ast_t *node) {
 
         TRYP(res, bindings(parser, &let->bindings));
 
-        stack_pop(&parser->indent_stack, NULL);
+        close_indent(parser);
 
         val_decl->body->rule = AST_LET;
     } 
     
     node->rule = AST_VAL_DECL;
+    return res;
+}
+
+int has_type(parser_t *parser, char *decl_name, ast_t *node) {
+    assert(parser != NULL);
+    assert(decl_name != NULL);
+    assert(node != NULL);
+
+    int res;
+
+    TRYP(res, accept(parser, TOK_OP_HASTYPE));
+
+    ast_has_type_decl_t *has_type_decl = &node->has_type_decl;
+
+    has_type_decl->symbol_name = decl_name;
+
+    TRYCR(has_type_decl->type_exp, (ast_t*)malloc(sizeof(ast_t)), NULL, 0);
+    TRYP(res, expression(parser, has_type_decl->type_exp));
+
+    node->rule = AST_HAS_TYPE_DECL;
     return res;
 }
 
@@ -353,10 +421,10 @@ int expression(parser_t *parser, ast_t *node) {
     int res, tmp;
 
     TRYP(res, if_exp(parser, node)
-            || unary_neg(parser, node)
+            // || unary_neg(parser, node)
             || fexpression(parser, node));
     
-    if ((tmp = accept(parser, TOK_OP) || accept(parser, TOK_OP_HASTYPE))) {
+    if ((tmp = operator(parser))) {
         res = tmp;
 
         ast_t *lhs;
@@ -430,7 +498,7 @@ int fexpression(parser_t *parser, ast_t *node) {
 
     ast_t *rhs;
     TRYCR(rhs, (ast_t*)malloc(sizeof(ast_t)), NULL, 0);
-    while ((tmp = expression(parser, rhs))) {
+    while ((tmp = aexpression(parser, rhs))) {
         res = tmp;
 
         ast_t *lhs;
