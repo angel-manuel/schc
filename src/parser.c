@@ -36,6 +36,11 @@ int expression(parser_t *parser, ast_t *node);
             int lit(parser_t *parser, ast_t *node);
     int bindings(parser_t *parser, vector_t *binds);
 
+
+void no_indent(parser_t *parser);
+void open_indent(parser_t *parser);
+void close_indent(parser_t *parser);
+
 int parser_init(parser_t *parser) {
     assert(parser != NULL);
 
@@ -137,6 +142,13 @@ int accept_exact_indent(parser_t *parser, int token) {
 
 int maybe(int res) {
     return res == 0 ? TOK_NO_TOK : res;
+}
+
+void no_indent(parser_t *parser) {
+    assert(parser != NULL);
+
+    int no_indent = -1;
+    stack_push(&parser->indent_stack, &no_indent);
 }
 
 void open_indent(parser_t *parser) {
@@ -452,17 +464,17 @@ int if_exp(parser_t *parser, ast_t *node) {
 
     TRYP(res, accept(parser, TOK_IF));
 
-    ast_if_t *if_expr = &node->if_exp; 
+    ast_if_t *if_expr = &node->if_exp;
 
     TRYCR(if_expr->cond, (ast_t*)malloc(sizeof(ast_t)), NULL, 0);
     TRYP(res, expression(parser, if_expr->cond));
-    
-    TRYP(res, accept(parser, TOK_THEN));
+
+    TRYP(res, accept_anywhere(parser, TOK_THEN));
 
     TRYCR(if_expr->then_branch, (ast_t*)malloc(sizeof(ast_t)), NULL, 0);
     TRYP(res, expression(parser, if_expr->then_branch));
     
-    TRYP(res, accept(parser, TOK_ELSE));
+    TRYP(res, accept_anywhere(parser, TOK_ELSE));
     
     TRYCR(if_expr->else_branch, (ast_t*)malloc(sizeof(ast_t)), NULL, 0);
     TRYP(res, expression(parser, if_expr->else_branch));
@@ -525,13 +537,12 @@ int aexpression(parser_t *parser, ast_t *node) {
     int res;
 
     if (accept(parser, '(')) {
-        int no_indent = -1;
-        stack_push(&parser->indent_stack, &no_indent);
+        no_indent(parser);
         
         TRYP(res, expression(parser, node));
         TRYP(res, accept(parser, ')'));
 
-        stack_pop(&parser->indent_stack, NULL);
+        close_indent(parser);
     } else {
         TRYP(res, var(parser, node)
                 || con(parser, node)
