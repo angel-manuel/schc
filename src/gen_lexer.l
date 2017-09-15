@@ -63,7 +63,6 @@ LINE_COMMENT --.*
 "{"         { return '{'; }
 "}"         { return '}'; }
 "_"         { return '_'; }
-"="         { return '='; }
 "~"         { return '~'; }
 "."         { return '.'; }
 
