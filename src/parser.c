@@ -32,7 +32,7 @@ int operator(parser_t *parser);
 
 int root(parser_t *parser, ast_t *node);
 int module(parser_t *parser, ast_t *node);
-    int exports(parser_t *parser, ast_t *node);
+    int exports(parser_t *parser, vector_t/*ast_export_t*/ *exports);
         int export(parser_t *parser, ast_export_t *ex);
     int body(parser_t *parser, ast_t *node);
         int declaration(parser_t *parser, ast_t *node);
@@ -237,7 +237,7 @@ int module(parser_t *parser, ast_t *node) {
     int res;
     ast_module_t *module = &node->module;
     module->modid = NULL;
-    module->exports = NULL;
+    TRYCR(res, vector_init(&module->exports, sizeof(ast_export_t)), -1, 0);
 
     TRYP(res, maybe(soft(accept(parser, TOK_MODULE))));
 
@@ -245,8 +245,7 @@ int module(parser_t *parser, ast_t *node) {
         TRYP(res, accept(parser, TOK_CONID));
         module->modid = parser_get_text(parser);
 
-        TRYCR(module->exports, (ast_t*)malloc(sizeof(ast_t)), NULL, -1);
-        TRYP(res, exports(parser, module->exports));
+        TRYP(res, exports(parser, &module->exports));
 
         TRYP(res, accept(parser, TOK_WHERE));
 
@@ -263,31 +262,27 @@ int module(parser_t *parser, ast_t *node) {
     return res;
 }
 
-int exports(parser_t *parser, ast_t *node) {
+int exports(parser_t *parser, vector_t/*ast_export_t*/ *exports) {
     assert(parser != NULL);
-    assert(node != NULL);
+    assert(exports != NULL);
 
     int res;
-    ast_exports_t *exports = &node->exports;
 
     TRYP(res, soft(accept(parser, '(')));
 
-    TRYCR(res, vector_init(&exports->exports, sizeof(ast_export_t)), -1, 0);
-
-    TRYP(res, maybe(export(parser, (ast_export_t*)vector_alloc_elem(&exports->exports))));
+    TRYP(res, maybe(export(parser, (ast_export_t*)vector_alloc_elem(exports))));
     while((res != TOK_NO_TOK)) {
         TRYP(res, maybe(soft(accept(parser, ','))));
         if(res == TOK_NO_TOK) {
             break;
         }
-        TRYP(res, export(parser, (ast_export_t*)vector_alloc_elem(&exports->exports)));
+        TRYP(res, export(parser, (ast_export_t*)vector_alloc_elem(exports)));
     }
 
-    exports->exports.len--;
+    exports->len--;
 
     TRYP(res, accept(parser, ')'));
 
-    node->rule = AST_EXPORTS;
     return res;
 }
 

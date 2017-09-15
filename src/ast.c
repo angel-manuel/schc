@@ -32,29 +32,22 @@ void ast_print_indent(const ast_t *node, FILE *fp, int indent) {
             if (module->modid != NULL) {
                 fprintf(fp, "%*smodid = %s\n", indent + FINDENT, "", module->modid);
             }
-            if (module->exports != NULL) {
-                fprintf(fp, "%*sexports =\n", indent + FINDENT, "");
-                ast_print_indent(module->exports, fp, indent + INDENT);
-                fprintf(fp, "%*s\n", indent + FINDENT, "");
+            
+            if (module->exports.len) {
+                fprintf(fp, "%*sexports = [", indent + FINDENT, "");
+
+                for(int i = 0; i < module->exports.len; ++i) {
+                    const ast_export_t *export = vector_get_ref(&module->exports, i);
+                    fprintf(fp, (i + 1 < module->exports.len) ? "%s ": "%s]\n", export->exportid);
+                }
             }
+            
             fprintf(fp, "%*sbody = {\n", indent + FINDENT, "");
             ast_print_indent(module->body, fp, indent + INDENT);
             fprintf(fp, "\n%*s}\n", indent + FINDENT, "");
 
             fprintf(fp, "%*s}", indent, "");
             
-            break;
-        } 
-        case AST_EXPORTS:
-        {
-            const ast_exports_t *exports = &node->exports;
-
-            fprintf(fp, "%*sEXPORTS = [", indent, "");
-            for(int i = 0; i < exports->exports.len; ++i) {
-                const ast_export_t *export = vector_get_ref(&exports->exports, i);
-                fprintf(fp, (i + 1 < exports->exports.len) ? "%s ": "%s]", export->exportid);
-            }
-
             break;
         }
         case AST_BODY:

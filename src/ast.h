@@ -35,7 +35,6 @@ typedef enum ast_rule_ {
     AST_FN_DECL,
     AST_VAL_DECL,
     AST_MODULE,
-    AST_EXPORTS,
     AST_BODY,
 } ast_rule_t;
 
@@ -46,7 +45,7 @@ void ast_print(const ast_t *ast, FILE *fp);
 
 typedef struct ast_module_ {
     char *modid;
-    ast_t *exports;
+    vector_t/*ast_export_t*/ exports;
     ast_t *body;
 } ast_module_t;
 
@@ -54,11 +53,7 @@ typedef struct ast_export_ {
     char *exportid;
 } ast_export_t;
 
-typedef struct ast_exports_ {
-    vector_t/*ast_export_t*/ exports;
-} ast_exports_t;
-
-typedef struct ast_decls_ {
+typedef struct ast_body_ {
     vector_t/*ast_t**/ impdecls;
     vector_t/*ast_t**/ topdecls;
 } ast_body_t;
@@ -129,7 +124,6 @@ struct ast_ {
     ast_rule_t rule;
     union {
         ast_module_t module;
-        ast_exports_t exports;
         ast_body_t body;
         ast_neg_t neg;
         ast_fn_appl_t fn_appl;
