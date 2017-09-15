@@ -2,10 +2,12 @@
 #define SCHC_UTIL_H_
 
 #define TRYCR(var, exp, cond, ret)  \
-(var) = (exp);                        \
+do {                                \
+(var) = (exp);                      \
 if ((var) == (cond)) {              \
     return (ret);                   \
-} 
+}                                   \
+} while (0);
 
 #define TRYC(var, exp, cond) TRYCR((var), (exp), (cond), (cond))
 #define TRY(var, exp) TRYCR((var), (exp), -1, -1)

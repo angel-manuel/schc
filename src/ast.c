@@ -21,6 +21,9 @@ void ast_print_indent(const ast_t *node, FILE *fp, int indent) {
     int i;
 
     switch (node->rule) {
+        case AST_NO_RULE:
+            fprintf(fp, "%*sNO_RULE", indent, "");
+            break;
         case AST_MODULE:
         {
             const ast_module_t *module = &node->module;
