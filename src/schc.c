@@ -43,7 +43,10 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
+  yylex_destroy();
+
   ast_print(&ast, stdout);
+  ast_destroy(&ast);
 
   parser_destroy(&parser);
 

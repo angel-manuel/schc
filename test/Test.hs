@@ -7,7 +7,7 @@ module Main (
 {- Block comment -}
 -- Line comment
 
--- main :: IO ()
+main :: IO ()
 main = putStrLn (show (fac 6))
 
 facr :: Int -> Int -> Int
@@ -23,4 +23,4 @@ fac n = facr 1 (n + 1)
 --     line <- getLine
 --     let n = (read line) :: Int
 --     let res = fac n
---     putStrLn (show res) -}
+--     putStrLn (show res)

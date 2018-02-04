@@ -71,6 +71,10 @@ int parser_init(parser_t *parser) {
 void parser_destroy(parser_t *parser) {
     assert(parser != NULL);
 
+    if (parser->ptext != NULL) {
+        free(parser->ptext);
+    }
+
     stack_destroy(&parser->indent_stack);
 }
 
@@ -278,8 +282,6 @@ int exports(parser_t *parser, vector_t/*ast_export_t*/ *exports) {
         }
         TRYP(res, export(parser, (ast_export_t*)vector_alloc_elem(exports)));
     }
-
-    exports->len--;
 
     TRYP(res, accept(parser, ')'));
 
@@ -611,6 +613,14 @@ int con(parser_t *parser, ast_t *node) {
     assert(node != NULL);
 
     int res;
+
+    TRYP(res, maybe(soft(accept(parser, TOK_UNIT))));
+
+    if (res != TOK_NO_TOK) {
+        node->con.name = stralloc("()");
+        node->rule = AST_CON;
+        return res;
+    }
 
     TRYP(res, soft(accept(parser, TOK_CONID)));
     node->con.name = parser_get_text(parser);

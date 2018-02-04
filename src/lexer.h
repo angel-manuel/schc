@@ -3,7 +3,8 @@
 
 #include <stdio.h>
 
-extern int   yylex();
+extern int yylex();
+extern int yylex_destroy();
 extern char *yytext;
 extern FILE *yyin;
 extern FILE *yyout;
@@ -46,6 +47,7 @@ typedef enum token_ {
   TOK_THEN,
   TOK_TYPE,
   TOK_WHERE,
+  TOK_UNIT,
 } token_t;
 
 const char *strtoken(int token);

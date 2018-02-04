@@ -1,10 +1,19 @@
 CC = clang
-CFLAGS = -Wall -Werror -Wfatal-errors -std=c99 -g
+CFLAGS = -Wall -Werror -Wfatal-errors -std=c99
 CFLAGS_FLEX = -std=c99 -D_POSIX_SOURCE
 SOURCES = $(wildcard src/*.c)
 OBJECTS = $(patsubst src/%.c, build/%.o, $(SOURCES)) build/gen_lexer.o
 
-all: build
+.PHONY: all
+all: debug
+
+.PHONY: debug
+debug: CFLAGS += -DDEBUG -g
+debug: build
+
+.PHONY: release
+release: CFLAGS += -DNDEBUG -O3
+release: build
 
 .PHONY: build
 build: dirs schc

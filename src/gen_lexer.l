@@ -52,6 +52,7 @@ LINE_COMMENT --.*
 "type"		{ return TOK_TYPE; }
 "where"		{ return TOK_WHERE; }
 
+"()"        { return TOK_UNIT; }
 
 "("         { return '('; }
 ")"         { return ')'; }

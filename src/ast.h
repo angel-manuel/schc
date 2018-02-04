@@ -41,7 +41,8 @@ typedef enum ast_rule_ {
 struct ast_;
 typedef struct ast_ ast_t;
 
-void ast_print(const ast_t *ast, FILE *fp);
+void ast_print(const ast_t *node, FILE *fp);
+void ast_destroy(ast_t *node);
 
 typedef struct ast_module_ {
     char *modid;
