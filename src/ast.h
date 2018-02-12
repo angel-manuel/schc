@@ -80,6 +80,10 @@ typedef struct ast_if_ {
     ast_t *else_branch;
 } ast_if_t;
 
+typedef struct ast_do_ {
+    vector_t/*ast_t*/ steps;
+} ast_do_t;
+
 typedef struct ast_let_ {
     vector_t/*ast_t*/ bindings;
     ast_t *body;
@@ -130,6 +134,7 @@ struct ast_ {
         ast_fn_appl_t fn_appl;
         ast_op_appl_t op_appl;
         ast_if_t if_exp;
+        ast_do_t do_exp;
         ast_let_t let;
         ast_var_t var;
         ast_con_t con;

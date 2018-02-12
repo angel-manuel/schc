@@ -89,6 +89,17 @@ void ast_destroy(ast_t *node) {
 
             break;
         }
+        case AST_DO:
+        {
+            ast_do_t *do_exp = &node->do_exp;
+
+            for (int i = 0; i < do_exp->steps.len; ++i) {
+                ast_destroy((ast_t*)vector_get_ref(&do_exp->steps, i));
+            }
+            vector_destroy(&do_exp->steps);
+
+            break;
+        }
         case AST_LET:
         {
             ast_let_t *let = &node->let;
@@ -285,6 +296,17 @@ void ast_print_indent(const ast_t *node, FILE *fp, int indent) {
             fprintf(fp, "\n%*s}\n", indent + FINDENT, "");
 
             fprintf(fp, "%*s}", indent, "");
+            break;
+        }
+        case AST_DO:
+        {
+            const ast_do_t *do_exp = &node->do_exp;
+
+            fprintf(fp, "%*sDO {\n", indent, "");
+            fprintf(fp, "%*ssteps = ", indent + FINDENT, "");
+            ast_print_vec_indent(&do_exp->steps, fp, indent + FINDENT);
+            fprintf(fp, "\n%*s}", indent, "");
+
             break;
         }
         case AST_LET:

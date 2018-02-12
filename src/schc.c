@@ -50,6 +50,7 @@ int main(int argc, char *argv[]) {
 
   parser_destroy(&parser);
 
+  // printf("input = %p\n", input);
   fclose(input);
 
   return 0;

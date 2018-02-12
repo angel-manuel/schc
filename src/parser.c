@@ -8,7 +8,7 @@
 #include "lexer.h"
 #include "util.h"
 
-#define PFAIL(fail) fprintf(stderr, "Parser FAIL: %s\n", fail);
+#define PFAIL(fail) fprintf(stderr, "Parser FAIL(%s:%d): %s\n", __FILE__, __LINE__, fail);
 
 #define TRYP(res, exp)      \
 do {                        \
@@ -45,6 +45,7 @@ int expression(parser_t *parser, ast_t *node);
     int fexpression(parser_t *parser, ast_t *node);
         int aexpression(parser_t *parser, ast_t *node);
             int if_exp(parser_t *parser, ast_t *node);
+            int do_exp(parser_t *parser, ast_t *node);
             int var(parser_t *parser, ast_t *node);
             int con(parser_t *parser, ast_t *node);
             int lit(parser_t *parser, ast_t *node);
@@ -54,6 +55,8 @@ int expression(parser_t *parser, ast_t *node);
 void no_indent(parser_t *parser);
 void open_indent(parser_t *parser);
 void close_indent(parser_t *parser);
+void lock_next_line(parser_t *parser);
+void unlock_line(parser_t *parser);
 
 int parser_init(parser_t *parser) {
     assert(parser != NULL);
@@ -64,6 +67,8 @@ int parser_init(parser_t *parser) {
     parser->ptext = NULL;
     parser->new_indent_accepted = 0;
     TRY(res, stack_init(&parser->indent_stack, sizeof(int)));
+    parser->lock_next_line = 0;
+    parser->line = -1;
 
     return 0;
 }
@@ -116,6 +121,12 @@ int accept_anywhere(parser_t *parser, int token) {
         printf("%-20s%s\n", strtoken(token), yytext);
         TRYCR(parser->ptext, stralloc(yytext), NULL, -1);
         parser->token = yylex();
+
+        if (parser->lock_next_line) {
+            parser->lock_next_line = 0;
+            parser->line = yylineno;
+        }
+
         return token;
     }
 
@@ -128,11 +139,15 @@ int accept(parser_t *parser, int token) {
     const int *stack_ind = stack_peek(&parser->indent_stack);
     int indent = yycolumn - strlen(yytext);
 
-    if (stack_ind == NULL || indent > *stack_ind) {
-        return accept_anywhere(parser, token);
+    if (stack_ind != NULL && indent <= *stack_ind) {
+        return -1;
     }
 
-    return -1;
+    if (parser->line != -1 && yylineno != parser->line) {
+        return -1;
+    }
+
+    return accept_anywhere(parser, token);
 }
 
 int accept_exact_indent(parser_t *parser, int token) {
@@ -202,6 +217,19 @@ void close_indent(parser_t *parser) {
     } else {
         printf("Indent: %d\n", *curr_indent);
     }
+}
+
+void lock_next_line(parser_t *parser) {
+    assert(parser != NULL);
+
+    unlock_line(parser);
+    parser->lock_next_line = 1;
+}
+
+void unlock_line(parser_t *parser) {
+    assert(parser != NULL);
+
+    parser->line = -1;
 }
 
 // Rules
@@ -469,14 +497,16 @@ int expression(parser_t *parser, ast_t *node) {
     assert(parser != NULL);
     assert(node != NULL);
 
-    int res;
+    int res, tmp;
 
     TRYP(res, 
             if_exp(parser, node) ||
+            do_exp(parser, node) ||
             fexpression(parser, node));
     
-    TRYP(res, maybe(operator(parser)));
-    if (res != TOK_NO_TOK) {
+    TRYP(tmp, maybe(operator(parser)));
+    if (tmp != TOK_NO_TOK) {
+        res = tmp;
         ast_t *lhs;
         TRYCR(lhs, (ast_t*)malloc(sizeof(ast_t)), NULL, -1);
         memcpy(lhs, node, sizeof(ast_t));
@@ -518,6 +548,42 @@ int if_exp(parser_t *parser, ast_t *node) {
     TRYP(res, expression(parser, if_expr->else_branch));
     
     node->rule = AST_IF;
+    return res;
+}
+
+int do_exp(parser_t *parser, ast_t *node) {
+    assert(parser != NULL);
+    assert(node != NULL);
+
+    int res, tmp;
+
+    TRYP(res, soft(accept(parser, TOK_DO)));
+
+    ast_do_t *do_exp = &node->do_exp;
+
+    TRY(res, vector_init(&do_exp->steps, sizeof(ast_t)));
+
+    open_indent(parser);
+    lock_next_line(parser);
+
+    ast_t *new_step = (ast_t*)vector_alloc_elem(&do_exp->steps);
+
+    TRY(tmp, expression(parser, new_step));
+
+    do {
+        res = tmp;
+        new_step = (ast_t*)vector_alloc_elem(&do_exp->steps);
+
+        lock_next_line(parser);
+        TRY(tmp, maybe(expression(parser, new_step)));
+    } while (tmp != TOK_NO_TOK);
+
+    do_exp->steps.len--;
+
+    unlock_line(parser);
+    close_indent(parser);
+
+    node->rule = AST_DO;
     return res;
 }
 

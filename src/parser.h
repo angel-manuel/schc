@@ -9,6 +9,8 @@ typedef struct parser_ {
     char *ptext;
     int new_indent_accepted;
     stack_t/*int*/ indent_stack;
+    int lock_next_line;
+    int line;
 } parser_t;
 
 int parser_init(parser_t *parser);
