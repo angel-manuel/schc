@@ -8,13 +8,13 @@ char *stralloc(const char *src) {
     assert(src != NULL);
 
     size_t srclen = strlen(src);
-    char *dst = (char*)malloc(srclen+1);
+    char *dst = (char *)malloc(srclen + 1);
 
     if (dst == NULL) {
         return NULL;
     }
 
-    memcpy(dst, src, srclen+1);
+    memcpy(dst, src, srclen + 1);
 
     return dst;
 }

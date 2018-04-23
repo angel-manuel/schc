@@ -37,7 +37,7 @@ const void *stack_peek(stack_t *stack) {
 
 int stack_pop(stack_t *stack, void *elem) {
     assert(stack != NULL);
-    
+
     int len = stack->vector.len;
 
     if (len == 0) {
@@ -45,7 +45,8 @@ int stack_pop(stack_t *stack, void *elem) {
     }
 
     if (elem != NULL) {
-        memcpy(elem, vector_get_ref(&stack->vector, len - 1), stack->vector.elem_size);
+        memcpy(elem, vector_get_ref(&stack->vector, len - 1),
+               stack->vector.elem_size);
     }
 
     stack->vector.len--;

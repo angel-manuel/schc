@@ -46,22 +46,18 @@ void ast_destroy(ast_t *node);
 
 typedef struct ast_module_ {
     char *modid;
-    vector_t/*ast_export_t*/ exports;
+    vector_t /*ast_export_t*/ exports;
     ast_t *body;
 } ast_module_t;
 
-typedef struct ast_export_ {
-    char *exportid;
-} ast_export_t;
+typedef struct ast_export_ { char *exportid; } ast_export_t;
 
 typedef struct ast_body_ {
-    vector_t/*ast_t**/ impdecls;
-    vector_t/*ast_t**/ topdecls;
+    vector_t /*ast_t**/ impdecls;
+    vector_t /*ast_t**/ topdecls;
 } ast_body_t;
 
-typedef struct ast_neg_ {
-    ast_t *expr;
-} ast_neg_t;
+typedef struct ast_neg_ { ast_t *expr; } ast_neg_t;
 
 typedef struct ast_fn_appl_ {
     ast_t *fn;
@@ -80,22 +76,16 @@ typedef struct ast_if_ {
     ast_t *else_branch;
 } ast_if_t;
 
-typedef struct ast_do_ {
-    vector_t/*ast_t*/ steps;
-} ast_do_t;
+typedef struct ast_do_ { vector_t /*ast_t*/ steps; } ast_do_t;
 
 typedef struct ast_let_ {
-    vector_t/*ast_t*/ bindings;
+    vector_t /*ast_t*/ bindings;
     ast_t *body;
 } ast_let_t;
 
-typedef struct ast_var_ {
-    char *name;
-} ast_var_t;
+typedef struct ast_var_ { char *name; } ast_var_t;
 
-typedef struct ast_con_ {
-    char *name;
-} ast_con_t;
+typedef struct ast_con_ { char *name; } ast_con_t;
 
 typedef struct ast_lit_ {
     union {
@@ -111,7 +101,7 @@ typedef struct ast_fixity_decl_ {
 
 typedef struct ast_fn_decl_ {
     char *name;
-    vector_t/*char**/ vars;
+    vector_t /*char**/ vars;
     ast_t *body;
 } ast_fn_decl_t;
 
@@ -146,4 +136,4 @@ struct ast_ {
     };
 };
 
-#endif/*SCHC_AST_H_*/
+#endif /*SCHC_AST_H_*/

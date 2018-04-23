@@ -1,4 +1,4 @@
-CC = clang
+CC = gcc
 CFLAGS = -Wall -Werror -Wfatal-errors -std=c99
 CFLAGS_FLEX = -std=c99 -D_POSIX_SOURCE
 SOURCES = $(wildcard src/*.c)
