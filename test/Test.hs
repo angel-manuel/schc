@@ -21,6 +21,15 @@ fac n = facr 1 (n + 1)
 lelelelelele = 42 ; lolol = 1337
 }
 
+easy :: Int
+easy = let
+    a = 4
+    b = 6
+  in
+    let { c = 8;
+d = 10 } in
+    a + b
+
 main :: IO ()
 main = do
     line <- getLine
