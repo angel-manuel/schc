@@ -1,7 +1,7 @@
 %{
-#import <stdio.h>
+#include <stdio.h>
 
-#import "../src/lexer.h"
+#include "../src/lexer.h"
 
 int yycolumn = 0;
 
