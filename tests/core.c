@@ -33,12 +33,14 @@ int main() {
     env_init(&env);
 
     core_expr_t program;
+    program.form = CORE_NO_FORM;
 
     core_from_ast(&ast, &env, &program);
     core_print(&env, &program, stdout);
 
     core_destroy(&program);
     env_destroy(&env);
+    ast_destroy(&ast);
 
     return 0;
 }
