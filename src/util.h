@@ -9,6 +9,14 @@
         }                                                                      \
     } while (0);
 
+#define TRYNEG(var, exp)                                                       \
+    do {                                                                       \
+        (var) = (exp);                                                         \
+        if ((var) < 0) {                                                       \
+            return -1;                                                         \
+        }                                                                      \
+    } while (0);
+
 #define TRYC(var, exp, cond) TRYCR((var), (exp), (cond), (cond))
 #define TRY(var, exp) TRYCR((var), (exp), -1, -1)
 

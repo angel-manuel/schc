@@ -12,6 +12,8 @@ const char *strtoken(int token) {
         return "TOK_CONID";
     case TOK_NUMBER:
         return "TOK_NUMBER";
+    case TOK_STRING:
+        return "TOK_STRING";
     case TOK_OP:
         return "TOK_OP";
     case TOK_CASE:

@@ -36,3 +36,4 @@ main = do
     let n = (read line) :: Int
         res = fac n
     putStrLn (show res)
+    putStrLn "END"

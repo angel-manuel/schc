@@ -50,14 +50,18 @@ typedef struct ast_module_ {
     ast_t *body;
 } ast_module_t;
 
-typedef struct ast_export_ { char *exportid; } ast_export_t;
+typedef struct ast_export_ {
+    char *exportid;
+} ast_export_t;
 
 typedef struct ast_body_ {
     vector_t /*ast_t**/ impdecls;
     vector_t /*ast_t**/ topdecls;
 } ast_body_t;
 
-typedef struct ast_neg_ { ast_t *expr; } ast_neg_t;
+typedef struct ast_neg_ {
+    ast_t *expr;
+} ast_neg_t;
 
 typedef struct ast_fn_appl_ {
     ast_t *fn;
@@ -76,20 +80,34 @@ typedef struct ast_if_ {
     ast_t *else_branch;
 } ast_if_t;
 
-typedef struct ast_do_ { vector_t /*ast_t*/ steps; } ast_do_t;
+typedef struct ast_do_ {
+    vector_t /*ast_t*/ steps;
+} ast_do_t;
 
 typedef struct ast_let_ {
     vector_t /*ast_t*/ bindings;
     ast_t *body;
 } ast_let_t;
 
-typedef struct ast_var_ { char *name; } ast_var_t;
+typedef struct ast_var_ {
+    char *name;
+} ast_var_t;
 
-typedef struct ast_con_ { char *name; } ast_con_t;
+typedef struct ast_con_ {
+    char *name;
+} ast_con_t;
+
+typedef enum ast_lit_type_ {
+    AST_LIT_TYPE_NONE = 0,
+    AST_LIT_TYPE_INT,
+    AST_LIT_TYPE_STR,
+} ast_lit_type_t;
 
 typedef struct ast_lit_ {
+    ast_lit_type_t lit_type;
     union {
         int int_lit;
+        char *str_lit;
     };
 } ast_lit_t;
 

@@ -53,7 +53,11 @@ int do_exp(parser_t *parser, ast_t *node);
 int do_let_exp(parser_t *parser, ast_t *node);
 int var(parser_t *parser, ast_t *node);
 int con(parser_t *parser, ast_t *node);
+
 int lit(parser_t *parser, ast_t *node);
+int number(parser_t *parser, ast_t *node);
+int string(parser_t *parser, ast_t *node);
+
 int bindings(parser_t *parser, vector_t *binds);
 
 void open_indent(parser_t *parser);
@@ -732,13 +736,36 @@ int lit(parser_t *parser, ast_t *node) {
 
     int res;
 
+    TRYP(res, number(parser, node) || string(parser, node));
+
+    return res;
+}
+
+int number(parser_t *parser, ast_t *node) {
+    int res;
+
     TRYP(res, soft(accept(parser, TOK_NUMBER)));
     char *number_str = parser_get_text(parser);
 
     ast_lit_t *lit = &node->lit;
+    lit->lit_type = AST_LIT_TYPE_INT;
     lit->int_lit = atoi(number_str);
 
     free(number_str);
+
+    node->rule = AST_LIT;
+    return res;
+}
+
+int string(parser_t *parser, ast_t *node) {
+    int res;
+
+    TRYP(res, soft(accept(parser, TOK_STRING)));
+    char *str = parser_get_text(parser);
+
+    ast_lit_t *lit = &node->lit;
+    lit->lit_type = AST_LIT_TYPE_STR;
+    lit->str_lit = str;
 
     node->rule = AST_LIT;
     return res;

@@ -13,6 +13,7 @@ int yycolumn = 0;
 VARID [a-z][A-Za-z0-9']*
 CONID [A-Z][A-Za-z0-9']*
 NUMBER ([0-9]+)
+STRING \"[^\"]*\"
 OP [!#$%&*+./<=>?@\\\^|-]*
 LINE_COMMENT --.*
 
@@ -92,6 +93,10 @@ LINE_COMMENT --.*
 
 {NUMBER} {
     return TOK_NUMBER;
+}
+
+{STRING} {
+    return TOK_STRING;
 }
 
 {OP} {

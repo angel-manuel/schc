@@ -123,8 +123,14 @@ void ast_destroy(ast_t *node) {
 
         break;
     }
-    case AST_LIT:
+    case AST_LIT: {
+        ast_lit_t *lit = &node->lit;
+
+        if (lit->lit_type == AST_LIT_TYPE_STR) {
+            free(lit->str_lit);
+        }
         break;
+    }
     case AST_FIXITY_DECL: {
         ast_fixity_decl_t *fixity_decl = &node->fixity_decl;
 
@@ -318,9 +324,22 @@ void ast_print_indent(const ast_t *node, FILE *fp, int indent) {
     case AST_CON:
         fprintf(fp, "%*sCON { %s }", indent, "", node->con.name);
         break;
-    case AST_LIT:
-        fprintf(fp, "%*sLIT { number = %d }", indent, "", node->lit.int_lit);
+    case AST_LIT: {
+        const ast_lit_t *lit = &node->lit;
+
+        switch (lit->lit_type) {
+        case AST_LIT_TYPE_INT:
+            fprintf(fp, "%*sLIT { number = %d }", indent, "", lit->int_lit);
+            break;
+        case AST_LIT_TYPE_STR:
+            fprintf(fp, "%*sLIT { string = %s }", indent, "", lit->str_lit);
+            break;
+        default:
+            fprintf(fp, "%*sLIT { unknown }", indent, "");
+        }
+
         break;
+    }
     case AST_FIXITY_DECL:
         fprintf(fp, "%*sINFIX%c %d %s", indent, "",
                 node->fixity_decl.associativity, node->fixity_decl.fixity,

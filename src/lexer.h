@@ -18,6 +18,7 @@ typedef enum token_ {
     TOK_VARID,
     TOK_CONID,
     TOK_NUMBER,
+    TOK_STRING,
     TOK_OP,
 
     TOK_OP_RANGE,
