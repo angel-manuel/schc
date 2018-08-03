@@ -24,7 +24,12 @@ int core_print(const env_t *env, const core_expr_t *expr, FILE *fp) {
     assert(expr != NULL);
     assert(fp != NULL);
 
-    return core_print_indent(env, expr, fp, 0);
+    int res;
+
+    TRY(res, core_print_indent(env, expr, fp, 0));
+    TRYNEG(res, fprintf(fp, "\n"));
+
+    return res;
 }
 
 void core_destroy(core_expr_t *expr) {
@@ -61,6 +66,7 @@ void core_destroy(core_expr_t *expr) {
 
         break;
     }
+    case CORE_INTRINSIC:
     case CORE_LITERAL:
     case CORE_VALUE:
     case CORE_NO_FORM:
@@ -81,23 +87,26 @@ int core_print_indent(const env_t *env, const core_expr_t *expr, FILE *fp,
     case CORE_NO_FORM:
         TRYNEG(res, fprintf(fp, "%*sNO_FORM", indent, ""));
         break;
+    case CORE_INTRINSIC:
+        TRYNEG(res, fprintf(fp, "%*s#%s", indent, "", expr->intrinsic.name));
+        break;
     case CORE_VALUE: {
         env_id_t name_id = expr->value.name;
         const char *name;
 
         TRYCR(name, env_get(env, name_id), NULL, -1);
 
-        TRYNEG(res, fprintf(fp, "%*sVALUE {", indent, ""));
-        TRYNEG(res, fprintf(fp, "%*sid = %" PRIu64 "", indent + FINDENT, "",
+        TRYNEG(res, fprintf(fp, "%*sVALUE {\n", indent, ""));
+        TRYNEG(res, fprintf(fp, "%*sid = %" PRIu64 "\n", indent + FINDENT, "",
                             name_id));
-        TRYNEG(res, fprintf(fp, "%*svalue = %s", indent + FINDENT, "", name));
+        TRYNEG(res, fprintf(fp, "%*svalue = %s\n", indent + FINDENT, "", name));
         TRYNEG(res, fprintf(fp, "%*s}", indent, ""));
         break;
     }
     case CORE_APPL: {
         const core_appl_t *appl = &expr->appl;
 
-        TRYNEG(res, fprintf(fp, "%*sAPPL {", indent, ""));
+        TRYNEG(res, fprintf(fp, "%*sAPPL {\n", indent, ""));
 
         TRYNEG(res, fprintf(fp, "%*sfn = {\n", indent + FINDENT, ""));
         TRY(res, core_print_indent(env, appl->fn, fp, indent + INDENT));
@@ -118,10 +127,10 @@ int core_print_indent(const env_t *env, const core_expr_t *expr, FILE *fp,
         TRYCR(name, env_get(env, lambda->name), NULL, -1);
         TRYCR(typename, type_to_str(lambda->type), NULL, -1);
 
-        TRYNEG(res, fprintf(fp, "%*sLAMBDA {", indent, ""));
+        TRYNEG(res, fprintf(fp, "%*sLAMBDA {\n", indent, ""));
 
-        TRYNEG(res, fprintf(fp, "%*sarg = %s : %s", indent + FINDENT, "", name,
-                            typename));
+        TRYNEG(res, fprintf(fp, "%*sarg = %s : %s\n", indent + FINDENT, "",
+                            name, typename));
 
         TRYNEG(res, fprintf(fp, "%*sbody = {\n", indent + FINDENT, ""));
         TRY(res, core_print_indent(env, lambda->body, fp, indent + INDENT));
@@ -136,8 +145,8 @@ int core_print_indent(const env_t *env, const core_expr_t *expr, FILE *fp,
 
         switch (literal->type) {
         case CORE_LITERAL_I64:
-            TRYNEG(res, fprintf(fp, "%*sLITERAL { int = %" PRIi64 " }", indent,
-                                "", literal->i64));
+            TRYNEG(res,
+                   fprintf(fp, "%*s%" PRIi64 "i64", indent, "", literal->i64));
             break;
         default:
             TRYNEG(res, fprintf(fp, "%*sLITERAL { unknown }", indent, ""));
@@ -148,7 +157,7 @@ int core_print_indent(const env_t *env, const core_expr_t *expr, FILE *fp,
     case CORE_COND: {
         const core_cond_t *cond = &expr->cond;
 
-        TRYNEG(res, fprintf(fp, "%*sCOND {", indent, ""));
+        TRYNEG(res, fprintf(fp, "%*sCOND {\n", indent, ""));
 
         TRYNEG(res, fprintf(fp, "%*scond = {\n", indent + FINDENT, ""));
         TRY(res, core_print_indent(env, cond->cond, fp, indent + INDENT));

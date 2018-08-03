@@ -32,13 +32,29 @@ int main() {
     env_t env;
     env_init(&env);
 
-    core_expr_t program;
-    program.form = CORE_NO_FORM;
+    core_expr_t program, putStrLn, show2, show, lit2;
+    program.form = CORE_APPL;
+    program.appl.fn = &putStrLn;
+    program.appl.arg = &show2;
+
+    putStrLn.form = CORE_INTRINSIC;
+    putStrLn.intrinsic.name = "putStrLn";
+
+    show2.form = CORE_APPL;
+    show2.appl.fn = &show;
+    show2.appl.arg = &lit2;
+
+    show.form = CORE_INTRINSIC;
+    show.intrinsic.name = "show";
+
+    lit2.form = CORE_LITERAL;
+    lit2.literal.type = CORE_LITERAL_I64;
+    lit2.literal.i64 = 2;
 
     core_from_ast(&ast, &env, &program);
     core_print(&env, &program, stdout);
 
-    core_destroy(&program);
+    // core_destroy(&program);
     env_destroy(&env);
     ast_destroy(&ast);
 
