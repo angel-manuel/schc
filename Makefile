@@ -1,7 +1,7 @@
 CC = gcc
 CFLAGS = -Wall -Werror -Wfatal-errors -std=c99 -Isrc
 CFLAGS_FLEX = -std=c99 -D_POSIX_SOURCE
-SOURCES = $(filter-out src/schc.c, $(wildcard src/*.c))
+SOURCES = $(filter-out src/schc.c, $(wildcard src/*.c src/**/*.c))
 OBJECTS = $(patsubst src/%.c, build/%.o, $(SOURCES)) build/gen_lexer.o
 TESTS = $(patsubst tests/%.c, %-test, $(wildcard tests/*.c))
 
@@ -46,5 +46,10 @@ build/gen_lexer.o: build/gen_lexer.c
 build/%-test.o: tests/%.c
 	$(CC) $(CFLAGS) -o $@ -c $<
 
+build/%/:
+	mkdir -p $@
+
 build/%.o: src/%.c
 	$(CC) $(CFLAGS) -o $@ -c $<
+
+$(foreach OBJECT, $(OBJECTS), $(eval $(OBJECT): | $(dir $(OBJECT))))

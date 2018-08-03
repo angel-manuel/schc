@@ -1,7 +1,7 @@
 #ifndef SCHC_AST_H_
 #define SCHC_AST_H_
 
-#include "vector.h"
+#include "data/vector.h"
 
 #include <stdio.h>
 #include <sys/types.h>

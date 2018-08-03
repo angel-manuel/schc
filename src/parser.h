@@ -2,8 +2,8 @@
 #define SCHC_PARSER_H_
 
 #include "ast.h"
+#include "data/stack.h"
 #include "lexer.h"
-#include "stack.h"
 
 typedef enum {
     PARSER_NONE = 0,

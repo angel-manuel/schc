@@ -1,0 +1,3 @@
+#ifndef SCHC_DATA_HASHMAP_H_
+#define SCHC_DATA_HASHMAP_H_
+#endif /*SCHC_DATA_HASHMAP_H_*/

@@ -11,7 +11,6 @@
 
 typedef struct core_expr_ core_expr_t;
 
-int core_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr);
 int core_print(const env_t *env, const core_expr_t *expr, FILE *fp);
 void core_destroy(core_expr_t *expr);
 

@@ -1,5 +1,5 @@
-#ifndef SCHC_VECTOR_H_
-#define SCHC_VECTOR_H_
+#ifndef SCHC_DATA_VECTOR_H_
+#define SCHC_DATA_VECTOR_H_
 
 #include <stdlib.h>
 
@@ -19,4 +19,4 @@ const void *vector_get_ref(const vector_t *vector, size_t index);
 void *vector_alloc_elem(vector_t *vector);
 void *vector_push_back(vector_t *vector, void *item_ptr);
 
-#endif /*SCHC_VECTOR_H_*/
+#endif /*SCHC_DATA_VECTOR_H_*/
