@@ -18,5 +18,8 @@ void vector_destroy(vector_t *vector);
 const void *vector_get_ref(const vector_t *vector, size_t index);
 void *vector_alloc_elem(vector_t *vector);
 void *vector_push_back(vector_t *vector, void *item_ptr);
+void *vector_get_mem(vector_t *vector);
+
+int vector_grow(vector_t *vector);
 
 #endif /*SCHC_DATA_VECTOR_H_*/

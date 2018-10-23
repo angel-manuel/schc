@@ -51,7 +51,7 @@ int main() {
     lit2.literal.type = CORE_LITERAL_I64;
     lit2.literal.i64 = 2;
 
-    core_from_ast(&ast, &env, &program);
+    // core_from_ast(&ast, &env, &program);
     core_print(&env, &program, stdout);
 
     // core_destroy(&program);

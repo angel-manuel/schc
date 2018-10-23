@@ -62,17 +62,9 @@ void *vector_alloc_elem(vector_t *vector) {
     assert(vector->mem != NULL);
 
     if (vector->len >= vector->cap) {
-        if (vector->cap == 0) {
-            vector->cap = VECTOR_DEFAULT_INITIAL_CAP;
-        } else {
-            vector->cap *= 2;
-        }
-
-        void *new_mem = realloc(vector->mem, vector->elem_size * vector->cap);
-        if (new_mem == NULL) {
+        if (vector_grow(vector)) {
             return NULL;
         }
-        vector->mem = new_mem;
     }
 
     return vector->mem + (vector->len++ * vector->elem_size);
@@ -89,4 +81,20 @@ void *vector_push_back(vector_t *vector, void *item_ptr) {
     memcpy(dst_mem, item_ptr, vector->elem_size);
 
     return dst_mem;
+}
+
+int vector_grow(vector_t *vector) {
+    if (vector->cap == 0) {
+        vector->cap = VECTOR_DEFAULT_INITIAL_CAP;
+    } else {
+        vector->cap *= 2;
+    }
+
+    void *new_mem = realloc(vector->mem, vector->elem_size * vector->cap);
+    if (new_mem == NULL) {
+        return -1;
+    }
+    vector->mem = new_mem;
+
+    return 0;
 }
