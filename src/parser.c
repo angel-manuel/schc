@@ -582,7 +582,7 @@ int do_step(parser_t *parser, ast_t *node) {
 
     int res;
 
-    TRYP(res, expression(parser, node) || do_let_exp(parser, node));
+    TRYP(res, do_let_exp(parser, node) || expression(parser, node));
 
     return res;
 }
