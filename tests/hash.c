@@ -3,55 +3,84 @@
 
 #include <data/hashmap.h>
 
-int main() {
-    int one = 1, two = 2, three = 3, tmp;
+#include <test.h>
+
+static char * test_hashmap_init_with_cap() {
     hashmap_t map;
 
-    hashmap_init(&map, sizeof(int));
+    test_assert("Hashmap is initialized", !hashmap_init_with_cap(&map, sizeof(int), 2048));
 
-    printf("len(map) -> %zd\n", map.len);
+    test_assert("Hashmap has chosen capacity", map.cap == 2048);
+    test_assert("Hashmap has chosen elem_size", map.elem_size == sizeof(int));
+    test_assert("Hashmap has length 0", map.len == 0);
 
-    hashmap_put(&map, "aaa12345", &one);
-    printf("aaa12345 = 1\n");
-    hashmap_put(&map, "bbb", &two);
-    printf("bbb = 2\n");
+    hashmap_destroy(&map);
+    
+    test_assert("Hashmap is initialized", hashmap_init_with_cap(&map, sizeof(int), 3000) == 0);
 
-    printf("len(map) -> %zd\n", map.len);
+    test_assert("Hashmap has next power of 2 capacity", map.cap == 4096);
 
-    tmp = *((int*)hashmap_get(&map, "aaa12345"));
-    printf("aaa12345 -> %d\n", tmp);
-    tmp = *((int*)hashmap_get(&map, "bbb"));
-    printf("bbb -> %d\n", tmp);
+    hashmap_destroy(&map);
 
-    printf("ccc @ %p\n", hashmap_get(&map, "ccc"));
+    return NULL;
+}
 
-    hashmap_put(&map, "aaa12345", &three);
-    printf("aaa12345 = 3\n");
+static char * test_hashmap_simple_get_and_put() {
+    int i42 = 42;
+    int i12 = 12;
+    int i1337 = 1337;
+    hashmap_t map;
 
-    printf("len(map) -> %zd\n", map.len);
+    test_assert("Hashmap is initialized", !hashmap_init(&map, sizeof(int)));
 
-    tmp = *((int*)hashmap_get(&map, "aaa12345"));
-    printf("aaa12345 -> %d\n", tmp);
-    tmp = *((int*)hashmap_get(&map, "bbb"));
-    printf("bbb -> %d\n", tmp);
+    test_assert("put(hello, 42)", !hashmap_put(&map, "hello", &i42));
+    test_assert("", map.len == 1);
+    test_assert("put(world, 1337)", !hashmap_put(&map, "world", &i1337));
+    test_assert("", map.len == 2);
 
-    printf("ccc @ %p\n", hashmap_get(&map, "ccc"));
+    test_assert("get(hello) == 42", *((int*)hashmap_get(&map, "hello")) == 42);
+    test_assert("get(world) == 1337", *((int*)hashmap_get(&map, "world")) == 1337);
+    
+    test_assert("put(hello, 12)", !hashmap_put(&map, "hello", &i12));
+    test_assert("", map.len == 2);
+
+    test_assert("get(hello) == 12", *((int*)hashmap_get(&map, "hello")) == 12);
+    test_assert("get(foo) == null", hashmap_get(&map, "foo") == NULL);
+
+    hashmap_destroy(&map);
+
+    return NULL;
+}
+
+static char * test_hashmap_growth() {
+    hashmap_t map;
+
+    test_assert("Hashmap initialized with 256 capacity", !hashmap_init_with_cap(&map, sizeof(int), 256));
 
     for (int i = 0; i < 1500; i++) {
         char key[10];
 
         sprintf(key, "k%d", i);
 
-        hashmap_put(&map, key, &i);
-        printf("%s = %d\n", key, i);
+        test_assert("put(k#, #)", !hashmap_put(&map, key, &i));
     }
 
-    tmp = *((int*)hashmap_get(&map, "k42"));
-    printf("k42 -> %d\n", tmp);
-    tmp = *((int*)hashmap_get(&map, "k1337"));
-    printf("k1337 -> %d\n", tmp);
+    test_assert("get(k42) == 42", *((int*)hashmap_get(&map, "k42")) == 42);
+    test_assert("get(k1337) == 1337", *((int*)hashmap_get(&map, "k1337")) == 1337);
+    test_assert("get(foo) == null", hashmap_get(&map, "foo") == NULL);
+
+    test_assert("map has 1500 length", map.len == 1500);
+    test_assert("map has 4096 capacity", map.cap == 4096);
 
     hashmap_destroy(&map);
 
+    return NULL;
+}
+
+int main() {
+    test_run(test_hashmap_init_with_cap);
+    test_run(test_hashmap_simple_get_and_put);
+    test_run(test_hashmap_growth);
+    
     return 0;
 }

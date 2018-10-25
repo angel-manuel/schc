@@ -26,7 +26,7 @@ tests: dirs $(TESTS)
 schc: $(OBJECTS) build/schc.o
 	$(CC) $^ -o $@
 
-%-test: $(OBJECTS) build/%-test.o
+%-test: $(OBJECTS) build/%-test.o src/test.h
 	$(CC) $^ -o $@
 
 .PHONY: dirs
