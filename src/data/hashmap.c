@@ -4,9 +4,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <stdio.h>
-#include <inttypes.h>
-
 #include <util.h>
 #include <data/vector.h>
 
@@ -88,26 +85,25 @@ int hashmap_put(hashmap_t *hashmap, const char *key, const void *elem) {
 
     hashmap_location_t *loc = hashmap_get_entry(hashmap, fh, NULL);
 
-    if (loc->key) {
-        printf("Collision with %s\n", loc->key);
-        while (loc->key && strcmp(loc->key, key) != 0) {
-            // Capacity is always a power of 2 so this is modulo
-            fh = (fh + 1) & (hashmap->cap - 1);
-            loc = hashmap_get_entry(hashmap, fh, NULL);
+    while (loc->key) {
+        if (strcmp(loc->key, key) == 0) {
+            free(loc->key);
+            hashmap->len--;
+            break;
         }
 
-        free(loc->key);
+        // Capacity is always a power of 2 so this is modulo
+        fh = (fh + 1) & (hashmap->cap - 1);
+        loc = hashmap_get_entry(hashmap, fh, NULL);
     }
 
     TRYCR(loc->key, stralloc(key), NULL, -1);
     memcpy(loc->data, elem, hashmap->elem_size);
     hashmap->len++;
 
-    if (hashmap->len * 2 > hashmap->cap) {
+    if (hashmap->len * 2 >= hashmap->cap) {
         TRY(res, hashmap_grow(hashmap));
     }
-
-    printf("%zd of %zd\n", hashmap->len, hashmap->cap);
 
     return 0;
 }
@@ -150,6 +146,7 @@ int hashmap_grow(hashmap_t *hashmap) {
     hashmap->mem = new_mem;
     hashmap->cap_pow++;
     hashmap->cap = new_cap;
+    hashmap->len = 0;
 
     for (size_t i = 0; i < old_cap; ++i) {
         const hashmap_location_t *old_loc = hashmap_get_entry(hashmap, i, old_mem);
@@ -160,7 +157,7 @@ int hashmap_grow(hashmap_t *hashmap) {
             free(old_loc->key);
         }
     }
-
+    
     free(old_mem);
 
     return 0;
@@ -183,17 +180,15 @@ hashmap_location_t *hashmap_get_entry(hashmap_t *hashmap, size_t i, void *mem) {
 uint64_t hash(const char *str) {
     uint64_t res = 0;
     const char *ptr = str;
-    char buf[4] = {0};
+    uint64_t buf = 0;
 
     while (*ptr != '\0') {
-        buf[0] = buf[1] = buf[2] = buf[3] = 0;
+	strncpy((char*)&buf, ptr, sizeof(uint64_t));
 
-        for (int i = 0; i < 4 && *ptr != '\0'; ++i) {
-            buf[i] = *(ptr++);
-        }
+	for (int i = 0; i < sizeof(uint64_t) && *ptr != '\0'; ++i, ++ptr);
 
         res = (res << 23) || (res >> 41);
-        *((uint32_t *)&res) ^= *((uint32_t *)buf);
+	res ^= buf;
     }
 
     return res;
