@@ -19,15 +19,15 @@ hashmap_location_t *hashmap_get_entry(hashmap_t *hashmap, size_t i, void *mem);
 int hashmap_grow(hashmap_t *hashmap);
 uint64_t hash(const char *str);
 
-int hashmap_init(hashmap_t *hashmap, size_t elem_size) {
+int hashmap_init(hashmap_t *hashmap, size_t elem_size, void (*elem_destroy)(const void*)) {
     assert(hashmap != NULL);
     assert(elem_size >= 0);
 
-    return hashmap_init_with_cap(hashmap, elem_size, HASHMAP_DEFAULT_CAP);
+    return hashmap_init_with_cap(hashmap, elem_size, HASHMAP_DEFAULT_CAP, elem_destroy);
 }
 
 int hashmap_init_with_cap(hashmap_t *hashmap, size_t elem_size,
-                          size_t initial_capacity) {
+                          size_t initial_capacity, void (*elem_destroy)(const void*)) {
 
     assert(hashmap != NULL);
     assert(elem_size >= 0);
@@ -45,6 +45,7 @@ int hashmap_init_with_cap(hashmap_t *hashmap, size_t elem_size,
     hashmap->cap = cap;
     hashmap->elem_size = elem_size;
     hashmap->cap_pow = cap_pow;
+    hashmap->elem_destroy = elem_destroy;
 
     TRYCR(hashmap->mem, malloc(cap * (sizeof(hashmap_location_t) + elem_size)), NULL, -1);
 
@@ -63,6 +64,10 @@ void hashmap_destroy(hashmap_t *hashmap) {
 
         if (loc != NULL && loc->key != NULL) {
             free(loc->key);
+
+            if (hashmap->elem_destroy) {
+                hashmap->elem_destroy(loc->data);
+            }
         }
     }
 

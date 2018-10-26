@@ -8,7 +8,7 @@
 static char * test_hashmap_init_with_cap() {
     hashmap_t map;
 
-    test_assert("Hashmap is initialized", !hashmap_init_with_cap(&map, sizeof(int), 2048));
+    test_assert("Hashmap is initialized", !hashmap_init_with_cap(&map, sizeof(int), 2048, NULL));
 
     test_assert("Hashmap has chosen capacity", map.cap == 2048);
     test_assert("Hashmap has chosen elem_size", map.elem_size == sizeof(int));
@@ -16,7 +16,7 @@ static char * test_hashmap_init_with_cap() {
 
     hashmap_destroy(&map);
     
-    test_assert("Hashmap is initialized", hashmap_init_with_cap(&map, sizeof(int), 3000) == 0);
+    test_assert("Hashmap is initialized", hashmap_init_with_cap(&map, sizeof(int), 3000, NULL) == 0);
 
     test_assert("Hashmap has next power of 2 capacity", map.cap == 4096);
 
@@ -31,7 +31,7 @@ static char * test_hashmap_simple_get_and_put() {
     int i1337 = 1337;
     hashmap_t map;
 
-    test_assert("Hashmap is initialized", !hashmap_init(&map, sizeof(int)));
+    test_assert("Hashmap is initialized", !hashmap_init(&map, sizeof(int), NULL));
 
     test_assert("put(hello, 42)", !hashmap_put(&map, "hello", &i42));
     test_assert("", map.len == 1);
@@ -55,7 +55,7 @@ static char * test_hashmap_simple_get_and_put() {
 static char * test_hashmap_growth() {
     hashmap_t map;
 
-    test_assert("Hashmap initialized with 256 capacity", !hashmap_init_with_cap(&map, sizeof(int), 256));
+    test_assert("Hashmap initialized with 256 capacity", !hashmap_init_with_cap(&map, sizeof(int), 256, NULL));
 
     for (int i = 0; i < 1500; i++) {
         char key[10];
@@ -77,10 +77,39 @@ static char * test_hashmap_growth() {
     return NULL;
 }
 
+int destroys;
+
+void add_to_destroy(const void *elem) {
+    destroys += *((const int*)elem);
+}
+
+static char * test_hashmap_elem_destroy() {
+    hashmap_t map;
+    
+    test_assert("Hashmap is initialized", !hashmap_init(&map, sizeof(int), add_to_destroy));
+
+    destroys = 0;
+    
+    for (int i = 0; i <= 10; i++) {
+        char key[10];
+
+        sprintf(key, "k%d", i);
+
+        test_assert("put(k#, #)", !hashmap_put(&map, key, &i));
+    }
+
+    hashmap_destroy(&map);
+
+    test_assert("", destroys == 55);
+
+    return NULL;
+}
+
 int main() {
     test_run(test_hashmap_init_with_cap);
     test_run(test_hashmap_simple_get_and_put);
     test_run(test_hashmap_growth);
+    test_run(test_hashmap_elem_destroy);
     
     return 0;
 }
