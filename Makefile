@@ -1,4 +1,4 @@
-CC = gcc
+CC = clang
 CFLAGS = -Wall -Werror -Wfatal-errors -std=c99 -Isrc
 CFLAGS_FLEX = -std=c99 -D_POSIX_SOURCE
 SOURCES = $(filter-out src/schc.c, $(wildcard src/*.c src/**/*.c))
@@ -26,7 +26,7 @@ tests: dirs $(TESTS)
 schc: $(OBJECTS) build/schc.o
 	$(CC) $^ -o $@
 
-%-test: $(OBJECTS) build/%-test.o src/test.h
+%-test: $(OBJECTS) build/%-test.o
 	$(CC) $^ -o $@
 
 .PHONY: dirs
@@ -43,7 +43,7 @@ build/gen_lexer.c: src/gen_lexer.l
 build/gen_lexer.o: build/gen_lexer.c
 	$(CC) $(CFLAGS_FLEX) -o $@ -c $<
 
-build/%-test.o: tests/%.c
+build/%-test.o: tests/%.c src/test.h
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 build/%/:

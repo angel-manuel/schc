@@ -4,8 +4,8 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <util.h>
 #include <data/vector.h>
+#include <util.h>
 
 #define HASHMAP_DEFAULT_CAP 1024
 #define FIBONACCI_MULT UINT64_C(11400714819323198486)
@@ -19,15 +19,18 @@ hashmap_location_t *hashmap_get_entry(hashmap_t *hashmap, size_t i, void *mem);
 int hashmap_grow(hashmap_t *hashmap);
 uint64_t hash(const char *str);
 
-int hashmap_init(hashmap_t *hashmap, size_t elem_size, void (*elem_destroy)(const void*)) {
+int hashmap_init(hashmap_t *hashmap, size_t elem_size,
+                 void (*elem_destroy)(const void *)) {
     assert(hashmap != NULL);
     assert(elem_size >= 0);
 
-    return hashmap_init_with_cap(hashmap, elem_size, HASHMAP_DEFAULT_CAP, elem_destroy);
+    return hashmap_init_with_cap(hashmap, elem_size, HASHMAP_DEFAULT_CAP,
+                                 elem_destroy);
 }
 
 int hashmap_init_with_cap(hashmap_t *hashmap, size_t elem_size,
-                          size_t initial_capacity, void (*elem_destroy)(const void*)) {
+                          size_t initial_capacity,
+                          void (*elem_destroy)(const void *)) {
 
     assert(hashmap != NULL);
     assert(elem_size >= 0);
@@ -47,7 +50,8 @@ int hashmap_init_with_cap(hashmap_t *hashmap, size_t elem_size,
     hashmap->cap_pow = cap_pow;
     hashmap->elem_destroy = elem_destroy;
 
-    TRYCR(hashmap->mem, malloc(cap * (sizeof(hashmap_location_t) + elem_size)), NULL, -1);
+    TRYCR(hashmap->mem, malloc(cap * (sizeof(hashmap_location_t) + elem_size)),
+          NULL, -1);
 
     memset(hashmap->mem, 0, (sizeof(hashmap_location_t) + elem_size) * cap);
 
@@ -155,21 +159,26 @@ int hashmap_grow(hashmap_t *hashmap) {
     size_t new_cap = hashmap->cap * 2;
     void *new_mem;
 
-    TRYCR(new_mem, malloc(new_cap * (sizeof(hashmap_location_t) + hashmap->elem_size)), NULL, -1);
-    memset(new_mem, 0, new_cap * (sizeof(hashmap_location_t) + hashmap->elem_size));
+    TRYCR(new_mem,
+          malloc(new_cap * (sizeof(hashmap_location_t) + hashmap->elem_size)),
+          NULL, -1);
+    memset(new_mem, 0,
+           new_cap * (sizeof(hashmap_location_t) + hashmap->elem_size));
     hashmap->mem = new_mem;
     hashmap->cap_pow++;
     hashmap->cap = new_cap;
     hashmap->len = 0;
 
     for (size_t i = 0; i < old_cap; ++i) {
-        const hashmap_location_t *old_loc = hashmap_get_entry(hashmap, i, old_mem);
+        const hashmap_location_t *old_loc =
+            hashmap_get_entry(hashmap, i, old_mem);
 
         if (old_loc->key) {
-            TRY(res, hashmap_put_no_alloc(hashmap, old_loc->key, old_loc->data));
+            TRY(res,
+                hashmap_put_no_alloc(hashmap, old_loc->key, old_loc->data));
         }
     }
-    
+
     free(old_mem);
 
     return 0;
@@ -184,7 +193,9 @@ hashmap_location_t *hashmap_get_entry(hashmap_t *hashmap, size_t i, void *mem) {
         mem = hashmap->mem;
     }
 
-    return (hashmap_location_t*)(((char*)mem) + i * (sizeof(hashmap_location_t) + hashmap->elem_size));
+    return (hashmap_location_t *)(((char *)mem) +
+                                  i * (sizeof(hashmap_location_t) +
+                                       hashmap->elem_size));
 }
 
 // Hash
@@ -195,12 +206,13 @@ uint64_t hash(const char *str) {
     uint64_t buf = 0;
 
     while (*ptr != '\0') {
-	strncpy((char*)&buf, ptr, sizeof(uint64_t));
+        strncpy((char *)&buf, ptr, sizeof(uint64_t));
 
-	for (int i = 0; i < sizeof(uint64_t) && *ptr != '\0'; ++i, ++ptr);
+        for (int i = 0; i < sizeof(uint64_t) && *ptr != '\0'; ++i, ++ptr)
+            ;
 
         res = (res << 23) || (res >> 41);
-	res ^= buf;
+        res ^= buf;
     }
 
     return res;
