@@ -74,11 +74,20 @@ int hashmap_put(hashmap_t *hashmap, const char *key, const void *elem) {
     assert(key != NULL);
     assert(elem != NULL);
 
-    int res;
+    char *owned_key;
 
-    if (hashmap->len >= hashmap->cap) {
-        return -1;
-    }
+    TRYCR(owned_key, stralloc(key), NULL, -1);
+
+    return hashmap_put_no_alloc(hashmap, owned_key, elem);
+}
+
+int hashmap_put_no_alloc(hashmap_t *hashmap, char *key, const void *elem) {
+    assert(hashmap != NULL);
+    assert(key != NULL);
+    assert(elem != NULL);
+    assert(hashmap->len < hashmap->cap);
+
+    int res;
 
     uint64_t h = hash(key);
     uint64_t fh = (h * FIBONACCI_MULT) >> (64 - hashmap->cap_pow);
@@ -97,7 +106,7 @@ int hashmap_put(hashmap_t *hashmap, const char *key, const void *elem) {
         loc = hashmap_get_entry(hashmap, fh, NULL);
     }
 
-    TRYCR(loc->key, stralloc(key), NULL, -1);
+    loc->key = key;
     memcpy(loc->data, elem, hashmap->elem_size);
     hashmap->len++;
 
@@ -152,9 +161,7 @@ int hashmap_grow(hashmap_t *hashmap) {
         const hashmap_location_t *old_loc = hashmap_get_entry(hashmap, i, old_mem);
 
         if (old_loc->key) {
-            TRY(res, hashmap_put(hashmap, old_loc->key, old_loc->data));
-
-            free(old_loc->key);
+            TRY(res, hashmap_put_no_alloc(hashmap, old_loc->key, old_loc->data));
         }
     }
     

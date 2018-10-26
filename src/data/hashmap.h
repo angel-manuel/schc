@@ -17,6 +17,7 @@ int hashmap_init_with_cap(hashmap_t *hashmap, size_t elem_size,
 void hashmap_destroy(hashmap_t *hashmap);
 
 int hashmap_put(hashmap_t *hashmap, const char *key, const void *elem);
+int hashmap_put_no_alloc(hashmap_t *hashmap, char *key, const void *elem);
 void *hashmap_get(hashmap_t *hashmap, const char *key);
 
 #endif /*SCHC_DATA_HASHMAP_H_*/
