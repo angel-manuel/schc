@@ -4,6 +4,8 @@ module Main (
     main
 ) where
 
+-- module Main where
+
 {- Block comment -}
 -- Line comment
 

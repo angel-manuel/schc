@@ -302,7 +302,7 @@ int module(parser_t *parser, ast_t *node) {
         TRYP(res, accept(parser, TOK_CONID));
         module->modid = parser_get_text(parser);
 
-        TRYP(res, exports(parser, &module->exports));
+        TRYP(res, maybe(exports(parser, &module->exports)));
 
         TRYP(res, accept(parser, TOK_WHERE));
     }
