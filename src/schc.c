@@ -2,6 +2,9 @@
 #include <stdio.h>
 
 #include "ast.h"
+#include "core.h"
+#include "coregen.h"
+#include "data/hashmap.h"
 #include "lexer.h"
 #include "parser.h"
 
@@ -45,7 +48,36 @@ int main(int argc, char *argv[]) {
 
     yylex_destroy();
 
+    puts("AST:");
+    puts("========================================");
     ast_print(&ast, stdout);
+    puts("========================================");
+    puts("");
+
+    env_t env;
+    env_init(&env);
+
+    coregen_from_module_ast(&ast, &env);
+
+    puts("EXPRs:");
+    puts("========================================");
+
+    const vector_t /* const char* */ *keys = hashmap_keys(&env.scope);
+
+    for (size_t i = 0; i < keys->len; ++i) {
+        const char *expr_name = *((const char **)vector_get_ref(keys, i));
+        const core_expr_t *expr = hashmap_get(&env.scope, expr_name);
+
+        printf("%s = ", expr_name);
+        core_print(expr, stdout);
+        puts("");
+    }
+
+    puts("========================================");
+    puts("");
+
+    env_destroy(&env);
+
     ast_destroy(&ast);
 
     parser_destroy(&parser);

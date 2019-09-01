@@ -4,20 +4,18 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "env.h"
 #include "type.h"
 
 #include "ast.h"
 
 typedef struct core_expr_ core_expr_t;
 
-int core_print(const env_t *env, const core_expr_t *expr, FILE *fp);
+int core_print(const core_expr_t *expr, FILE *fp);
 void core_destroy(core_expr_t *expr);
 
 typedef enum core_expr_form_ {
     CORE_NO_FORM = 0,
     CORE_INTRINSIC,
-    CORE_VALUE,
     CORE_APPL,
     CORE_LAMBDA,
     CORE_LITERAL,
@@ -28,17 +26,12 @@ typedef struct core_intrinsic_ {
     const char *name;
 } core_intrinsic_t;
 
-typedef struct core_value_ {
-    env_id_t name;
-} core_value_t;
-
 typedef struct core_appl_ {
     core_expr_t *fn;
     core_expr_t *arg;
 } core_appl_t;
 
 typedef struct core_lambda {
-    env_id_t name;
     core_type_t type;
     core_expr_t *body;
 } core_lambda_t;
@@ -64,7 +57,6 @@ struct core_expr_ {
     core_expr_form_t form;
     union {
         core_intrinsic_t intrinsic;
-        core_value_t value;
         core_appl_t appl;
         core_lambda_t lambda;
         core_literal_t literal;

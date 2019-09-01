@@ -20,7 +20,7 @@ int hashmap_grow(hashmap_t *hashmap);
 uint64_t hash(const char *str);
 
 int hashmap_init(hashmap_t *hashmap, size_t elem_size,
-                 void (*elem_destroy)(const void *)) {
+                 void (*elem_destroy)(void *)) {
     assert(hashmap != NULL);
     assert(elem_size >= 0);
 
@@ -30,7 +30,7 @@ int hashmap_init(hashmap_t *hashmap, size_t elem_size,
 
 int hashmap_init_with_cap(hashmap_t *hashmap, size_t elem_size,
                           size_t initial_capacity,
-                          void (*elem_destroy)(const void *)) {
+                          void (*elem_destroy)(void *)) {
 
     assert(hashmap != NULL);
     assert(elem_size >= 0);
@@ -55,6 +55,9 @@ int hashmap_init_with_cap(hashmap_t *hashmap, size_t elem_size,
 
     memset(hashmap->mem, 0, (sizeof(hashmap_location_t) + elem_size) * cap);
 
+    int res;
+    TRY(res, vector_init_with_cap(&hashmap->keys, sizeof(const char *), cap));
+
     return 0;
 }
 
@@ -64,18 +67,26 @@ void hashmap_destroy(hashmap_t *hashmap) {
     size_t vlen = hashmap->cap;
 
     for (size_t i = 0; i < vlen; ++i) {
-        const hashmap_location_t *loc = hashmap_get_entry(hashmap, i, NULL);
+        hashmap_location_t *loc = hashmap_get_entry(hashmap, i, NULL);
 
         if (loc != NULL && loc->key != NULL) {
             free(loc->key);
 
             if (hashmap->elem_destroy) {
-                hashmap->elem_destroy(loc->data);
+                hashmap->elem_destroy(&loc->data);
             }
         }
     }
 
     free(hashmap->mem);
+
+    vector_destroy(&hashmap->keys);
+}
+
+const vector_t /* const char * */ *hashmap_keys(const hashmap_t *hashmap) {
+    assert(hashmap != NULL);
+
+    return &hashmap->keys;
 }
 
 int hashmap_put(hashmap_t *hashmap, const char *key, const void *elem) {
@@ -97,6 +108,7 @@ int hashmap_put_no_alloc(hashmap_t *hashmap, char *key, const void *elem) {
     assert(hashmap->len < hashmap->cap);
 
     int res;
+    int key_exists = 0;
 
     uint64_t h = hash(key);
     uint64_t fh = (h * FIBONACCI_MULT) >> (64 - hashmap->cap_pow);
@@ -107,12 +119,17 @@ int hashmap_put_no_alloc(hashmap_t *hashmap, char *key, const void *elem) {
         if (strcmp(loc->key, key) == 0) {
             free(loc->key);
             hashmap->len--;
+            key_exists = 1;
             break;
         }
 
         // Capacity is always a power of 2 so this is modulo
         fh = (fh + 1) & (hashmap->cap - 1);
         loc = hashmap_get_entry(hashmap, fh, NULL);
+    }
+
+    if (!key_exists) {
+        vector_push_back(&hashmap->keys, &key);
     }
 
     loc->key = key;
@@ -146,6 +163,13 @@ void *hashmap_get(hashmap_t *hashmap, const char *key) {
     }
 
     return NULL;
+}
+
+const void *hashmap_get_const(const hashmap_t *hashmap, const char *key) {
+    assert(hashmap != NULL);
+    assert(key != NULL);
+
+    return hashmap_get((void *)hashmap, key);
 }
 
 int hashmap_grow(hashmap_t *hashmap) {

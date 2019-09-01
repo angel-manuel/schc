@@ -4,19 +4,21 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#define ENV_DICT_SIZE 32000
+#include "core.h"
+#include "data/hashmap.h"
+#include "data/vector.h"
 
 typedef uint64_t env_id_t;
 
 typedef struct env_ {
-    env_id_t next_id;
-    char *dict[ENV_DICT_SIZE];
+    struct env_ *upper_scope;
+    hashmap_t /* core_expr_t* */ scope;
 } env_t;
 
 int env_init(env_t *env);
 void env_destroy(env_t *env);
 
-const char *env_get(const env_t *env, env_id_t id);
-int env_put(env_t *env, const char *str, env_id_t *out_id);
+core_expr_t *env_get_expr(env_t *env, const char *symbol);
+int env_put_expr(env_t *env, const char *symbol, core_expr_t *expr);
 
 #endif /*SCHC_CORE_ENV_H_*/

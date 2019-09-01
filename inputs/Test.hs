@@ -26,14 +26,15 @@ lelelelelele = 42 ; lolol = 1337
 easy :: Int
 easy = let
     a = 4
-    b = 6
+    b = a + 1
   in
-    let { c = 8;
-d = 10 } in
-    a + b
+    let { c = d + 1;
+d = 1 + b } in
+    a + b + c + d
 
 main :: IO ()
 main = do
+    print easy
     line <- getLine
     let n = (read line) :: Int
         res = fac n

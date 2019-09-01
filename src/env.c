@@ -6,10 +6,17 @@
 
 #include "util.h"
 
+#define ENV_INITIAL_CAPACITY 1024
+
 int env_init(env_t *env) {
     assert(env != NULL);
 
-    env->next_id = 0;
+    int res;
+
+    env->upper_scope = NULL;
+
+    TRY(res, hashmap_init_with_cap(&env->scope, sizeof(core_expr_t *),
+                                   ENV_INITIAL_CAPACITY, NULL));
 
     return 0;
 }
@@ -17,40 +24,33 @@ int env_init(env_t *env) {
 void env_destroy(env_t *env) {
     assert(env != NULL);
 
-    for (uint64_t i = 0; i < env->next_id; ++i) {
-        if (env->dict[i] != NULL) {
-            free(env->dict[i]);
-            env->dict[i] = NULL;
+    hashmap_destroy(&env->scope);
+}
+
+core_expr_t *env_get_expr(env_t *env, const char *symbol) {
+    assert(env != NULL);
+    assert(symbol != NULL);
+
+    core_expr_t **expr = (core_expr_t **)hashmap_get(&env->scope, symbol);
+
+    if (expr == NULL) {
+        if (env->upper_scope) {
+            return env_get_expr(env->upper_scope, symbol);
+        } else {
+            return NULL;
         }
-    }
-}
-
-const char *env_get(const env_t *env, env_id_t id) {
-    assert(env != NULL);
-    assert(id < ENV_DICT_SIZE);
-
-    if (id < env->next_id) {
-        return env->dict[id];
     } else {
-        return NULL;
+        return *expr;
     }
 }
 
-int env_put(env_t *env, const char *str, env_id_t *out_id) {
+int env_put_expr(env_t *env, const char *symbol, core_expr_t *expr) {
     assert(env != NULL);
-    assert(str != NULL);
-    assert(out_id != NULL);
+    assert(symbol != NULL);
 
-    if (env->next_id >= ENV_DICT_SIZE) {
-        return -1;
-    }
+    int res;
 
-    char *new_str;
-    TRYCR(new_str, stralloc(str), NULL, -1);
-
-    *out_id = env->next_id++;
-
-    env->dict[*out_id] = new_str;
+    TRY(res, hashmap_put(&env->scope, symbol, &expr));
 
     return 0;
 }
