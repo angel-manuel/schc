@@ -6,7 +6,7 @@
 #include "env.h"
 #include "util.h"
 
-#define INDENT 4
+#define INDENT 2
 #define FINDENT 2
 
 int core_print_indent(const core_expr_t *expr, FILE *fp, int indent);
@@ -77,26 +77,28 @@ int core_print_indent(const core_expr_t *expr, FILE *fp, int indent) {
 
     switch (expr->form) {
     case CORE_NO_FORM:
-        TRYNEG(res, fprintf(fp, "%*sNO_FORM", indent, ""));
+        TRYNEG(res, fprintf(fp, "NO_FORM"));
         break;
     case CORE_INDIR:
         TRY(res, core_print_indent(expr->indir.target, fp, indent));
         break;
     case CORE_INTRINSIC:
-        TRYNEG(res, fprintf(fp, "%*s#%s", indent, "", expr->intrinsic.name));
+        TRYNEG(res, fprintf(fp, "#%s", expr->intrinsic.name));
         break;
     case CORE_APPL: {
         const core_appl_t *appl = &expr->appl;
 
-        TRYNEG(res, fprintf(fp, "%*sAPPL {\n", indent, ""));
+        TRYNEG(res, fprintf(fp, "APPL {\n"));
 
-        TRYNEG(res, fprintf(fp, "%*sfn = {\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "%*sfn = ", indent + FINDENT, ""));
+        // TRY(res, core_print_indent(appl->fn, fp, indent + INDENT));
         TRY(res, core_print_indent(appl->fn, fp, indent + INDENT));
-        TRYNEG(res, fprintf(fp, "\n%*s}\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "\n"));
 
-        TRYNEG(res, fprintf(fp, "%*sarg = {\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "%*sarg = ", indent + FINDENT, ""));
+        // TRY(res, core_print_indent(appl->arg, fp, indent + INDENT));
         TRY(res, core_print_indent(appl->arg, fp, indent + INDENT));
-        TRYNEG(res, fprintf(fp, "\n%*s}\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "\n"));
 
         TRYNEG(res, fprintf(fp, "%*s}", indent, ""));
 
@@ -108,14 +110,14 @@ int core_print_indent(const core_expr_t *expr, FILE *fp, int indent) {
 
         TRYCR(typename, type_to_str(lambda->type), NULL, -1);
 
-        TRYNEG(res, fprintf(fp, "%*sLAMBDA {\n", indent, ""));
+        TRYNEG(res, fprintf(fp, "LAMBDA {\n"));
 
         TRYNEG(res, fprintf(fp, "%*sarg = %s : %s\n", indent + FINDENT, "",
                             "<arg>", typename));
 
-        TRYNEG(res, fprintf(fp, "%*sbody = {\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "%*sbody = ", indent + FINDENT, ""));
         TRY(res, core_print_indent(lambda->body, fp, indent + INDENT));
-        TRYNEG(res, fprintf(fp, "\n%*s}\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "\n"));
 
         TRYNEG(res, fprintf(fp, "%*s}", indent, ""));
 
@@ -126,11 +128,10 @@ int core_print_indent(const core_expr_t *expr, FILE *fp, int indent) {
 
         switch (literal->type) {
         case CORE_LITERAL_I64:
-            TRYNEG(res,
-                   fprintf(fp, "%*s%" PRIi64 "i64", indent, "", literal->i64));
+            TRYNEG(res, fprintf(fp, "%" PRIi64 "i64", literal->i64));
             break;
         default:
-            TRYNEG(res, fprintf(fp, "%*sLITERAL { unknown }", indent, ""));
+            TRYNEG(res, fprintf(fp, "LITERAL { unknown }"));
         }
 
         break;
@@ -138,25 +139,25 @@ int core_print_indent(const core_expr_t *expr, FILE *fp, int indent) {
     case CORE_COND: {
         const core_cond_t *cond = &expr->cond;
 
-        TRYNEG(res, fprintf(fp, "%*sCOND {\n", indent, ""));
+        TRYNEG(res, fprintf(fp, "COND {\n"));
 
-        TRYNEG(res, fprintf(fp, "%*scond = {\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "%*scond = ", indent + FINDENT, ""));
         TRY(res, core_print_indent(cond->cond, fp, indent + INDENT));
-        TRYNEG(res, fprintf(fp, "\n%*s}\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "\n"));
 
-        TRYNEG(res, fprintf(fp, "%*sthen_branch = {\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "%*sthen_branch = ", indent + FINDENT, ""));
         TRY(res, core_print_indent(cond->then_branch, fp, indent + INDENT));
-        TRYNEG(res, fprintf(fp, "\n%*s}\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "\n"));
 
-        TRYNEG(res, fprintf(fp, "%*selse_branch = {\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "%*selse_branch = ", indent + FINDENT, ""));
         TRY(res, core_print_indent(cond->else_branch, fp, indent + INDENT));
-        TRYNEG(res, fprintf(fp, "\n%*s}\n", indent + FINDENT, ""));
+        TRYNEG(res, fprintf(fp, "\n"));
 
         TRYNEG(res, fprintf(fp, "%*s}", indent, ""));
         break;
     }
     default:
-        fprintf(fp, "%*sForm #%d", indent, "", expr->form);
+        fprintf(fp, "Form #%d", expr->form);
     }
 
     return res;
