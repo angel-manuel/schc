@@ -23,13 +23,17 @@ fac n = facr 1 (n + 1)
 lelelelelele = 42 ; lolol = 1337
 }
 
+veryEasy = 1 + 2
+
+veryEasy2 = veryEasy
+
 easy :: Int
 easy = let
     a = 4
     b = a + 1
   in
     let { c = d + 1;
-d = 1 + b } in
+d = b } in
     a + b + c + d
 
 main :: IO ()

@@ -7,6 +7,7 @@
 
 #include "data/hashmap.h"
 
-int coregen_from_module_ast(const ast_t *ast, env_t *env);
+int coregen_from_module_ast(const ast_t *ast, env_t *env,
+                            vector_t /* core_expr_t */ *expr_heap);
 
 #endif /*SCHC_COREGEN_H_*/

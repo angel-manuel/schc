@@ -57,7 +57,13 @@ int main(int argc, char *argv[]) {
     env_t env;
     env_init(&env);
 
-    coregen_from_module_ast(&ast, &env);
+    vector_t /* core_expr_t */ expr_heap;
+    vector_init_with_cap(&expr_heap, sizeof(core_expr_t), 100000);
+
+    if (coregen_from_module_ast(&ast, &env, &expr_heap) == -1) {
+        fprintf(stderr, "Coregen error\n");
+        return 1;
+    }
 
     puts("EXPRs:");
     puts("========================================");
@@ -66,7 +72,8 @@ int main(int argc, char *argv[]) {
 
     for (size_t i = 0; i < keys->len; ++i) {
         const char *expr_name = *((const char **)vector_get_ref(keys, i));
-        const core_expr_t *expr = hashmap_get(&env.scope, expr_name);
+        const core_expr_t *expr =
+            *((const core_expr_t **)hashmap_get(&env.scope, expr_name));
 
         printf("%s = ", expr_name);
         core_print(expr, stdout);
@@ -75,6 +82,8 @@ int main(int argc, char *argv[]) {
 
     puts("========================================");
     puts("");
+
+    vector_destroy(&expr_heap);
 
     env_destroy(&env);
 

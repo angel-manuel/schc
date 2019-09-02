@@ -15,12 +15,17 @@ void core_destroy(core_expr_t *expr);
 
 typedef enum core_expr_form_ {
     CORE_NO_FORM = 0,
+    CORE_INDIR,
     CORE_INTRINSIC,
     CORE_APPL,
     CORE_LAMBDA,
     CORE_LITERAL,
     CORE_COND,
 } core_expr_form_t;
+
+typedef struct core_indir_ {
+    core_expr_t *target;
+} core_indir_t;
 
 typedef struct core_intrinsic_ {
     const char *name;
@@ -56,6 +61,7 @@ typedef struct core_cond_ {
 struct core_expr_ {
     core_expr_form_t form;
     union {
+        core_indir_t indir;
         core_intrinsic_t intrinsic;
         core_appl_t appl;
         core_lambda_t lambda;

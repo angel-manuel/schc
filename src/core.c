@@ -27,6 +27,9 @@ void core_destroy(core_expr_t *expr) {
     assert(expr != NULL);
 
     switch (expr->form) {
+    case CORE_INDIR:
+        core_destroy(expr->indir.target);
+        break;
     case CORE_APPL: {
         core_appl_t *appl = &expr->appl;
 
@@ -75,6 +78,9 @@ int core_print_indent(const core_expr_t *expr, FILE *fp, int indent) {
     switch (expr->form) {
     case CORE_NO_FORM:
         TRYNEG(res, fprintf(fp, "%*sNO_FORM", indent, ""));
+        break;
+    case CORE_INDIR:
+        TRY(res, core_print_indent(expr->indir.target, fp, indent));
         break;
     case CORE_INTRINSIC:
         TRYNEG(res, fprintf(fp, "%*s#%s", indent, "", expr->intrinsic.name));
