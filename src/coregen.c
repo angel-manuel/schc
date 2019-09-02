@@ -54,6 +54,7 @@ int coregen_populate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
     core_expr_t empty_tmpl;
 
     empty_tmpl.form = CORE_NO_FORM;
+    empty_tmpl.name = NULL;
 
     for (size_t i = 0; i < decls->len; ++i) {
         const ast_t *decl = (const ast_t *)vector_get_ref(decls, i);
@@ -65,6 +66,9 @@ int coregen_populate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
             core_expr_t *new_expr;
             TRYCR(new_expr, vector_push_back(expr_heap, &empty_tmpl), NULL, -1);
 
+            printf("PUT %s\n", val_decl->name);
+            new_expr->name = val_decl->name;
+
             TRY(res, env_put_expr(env, val_decl->name, new_expr));
 
             break;
@@ -74,6 +78,8 @@ int coregen_populate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
 
             core_expr_t *new_expr;
             TRYCR(new_expr, vector_push_back(expr_heap, &empty_tmpl), NULL, -1);
+
+            new_expr->name = fn_decl->name;
 
             TRY(res, env_put_expr(env, fn_decl->name, new_expr));
 
@@ -118,8 +124,6 @@ int coregen_generate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
             core_expr_t *expr;
 
             TRYCR(expr, env_get_expr(env, val_decl->name), NULL, -1);
-
-            core_print(expr, stdout);
 
             TRY(res, coregen_from_ast(val_decl->body, env, expr, expr_heap));
 
@@ -179,10 +183,12 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
 
         // TODO: Prealloc intrisics
         TRYCR(appl->fn, vector_alloc_elem(expr_heap), NULL, -1);
+        appl->fn->name = NULL;
         appl->fn->form = CORE_INTRINSIC;
         appl->fn->intrinsic.name = "neg";
 
         TRYCR(appl->arg, vector_alloc_elem(expr_heap), NULL, -1);
+        appl->arg->name = NULL;
         TRY(res, coregen_from_ast(neg_ast->expr, env, appl->arg, expr_heap));
 
         break;
@@ -194,9 +200,11 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
         core_appl_t *appl = &expr->appl;
 
         TRYCR(appl->fn, vector_alloc_elem(expr_heap), NULL, -1);
+        appl->fn->name = NULL;
         TRY(res, coregen_from_ast(fn_appl_ast->fn, env, appl->fn, expr_heap));
 
         TRYCR(appl->arg, vector_alloc_elem(expr_heap), NULL, -1);
+        appl->arg->name = NULL;
         TRY(res, coregen_from_ast(fn_appl_ast->arg, env, appl->arg, expr_heap));
 
         break;
@@ -210,6 +218,7 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
             // CGFAIL("Operator not found: \"%s\"", op_appl_ast->op_name);
             // return -1;
             TRYCR(op_expr, vector_alloc_elem(expr_heap), NULL, -1);
+            op_expr->name = NULL;
             op_expr->form = CORE_INTRINSIC;
 
             // TODO: Copy and dont leak mem
@@ -222,14 +231,17 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
         core_appl_t *appl = &expr->appl;
 
         TRYCR(appl->fn, vector_alloc_elem(expr_heap), NULL, -1);
+        appl->fn->name = NULL;
         appl->fn->form = CORE_APPL;
         core_appl_t *lhs_appl = &appl->fn->appl;
         lhs_appl->fn = op_expr;
         TRYCR(lhs_appl->arg, vector_alloc_elem(expr_heap), NULL, -1);
+        lhs_appl->arg->name = NULL;
         TRY(res,
             coregen_from_ast(op_appl_ast->lhs, env, lhs_appl->arg, expr_heap));
 
         TRYCR(appl->arg, vector_alloc_elem(expr_heap), NULL, -1);
+        appl->arg->name = NULL;
         TRY(res, coregen_from_ast(op_appl_ast->rhs, env, appl->arg, expr_heap));
 
         break;

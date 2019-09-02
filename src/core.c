@@ -75,6 +75,10 @@ int core_print_indent(const core_expr_t *expr, FILE *fp, int indent) {
 
     int res = 0;
 
+    if (expr->name != NULL) {
+        TRYNEG(res, fprintf(fp, "%s := ", expr->name));
+    }
+
     switch (expr->form) {
     case CORE_NO_FORM:
         TRYNEG(res, fprintf(fp, "NO_FORM"));

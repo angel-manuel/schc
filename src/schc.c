@@ -75,7 +75,6 @@ int main(int argc, char *argv[]) {
         const core_expr_t *expr =
             *((const core_expr_t **)hashmap_get(&env.scope, expr_name));
 
-        printf("%s = ", expr_name);
         core_print(expr, stdout);
         puts("");
     }

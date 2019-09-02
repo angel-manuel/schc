@@ -59,6 +59,7 @@ typedef struct core_cond_ {
 } core_cond_t;
 
 struct core_expr_ {
+    char *name;
     core_expr_form_t form;
     union {
         core_indir_t indir;
