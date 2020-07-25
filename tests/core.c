@@ -1,17 +1,25 @@
 
 #include <ast.h>
+#include <env.h>
 #include <lexer.h>
 #include <parser.h>
 
 #include <core.h>
+#include <coregen.h>
+#include <intrinsics/intrinsics.h>
 
 typedef size_t yy_size_t;
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 extern YY_BUFFER_STATE yy_scan_string(char *str);
 
+// char PROGRAM[] = "              \n\
+// main = putStrLn (show 2)        \n\
+// ";
+
 char PROGRAM[] = "              \n\
-main = do                       \n\
-    putStrLn (show 2)           \n\
+main = putStrLn (show (f 3))    \n\
+                                \n\
+f x = x * 2                     \n\
 ";
 
 int main() {
@@ -29,34 +37,36 @@ int main() {
 
     ast_print(&ast, stdout);
 
-    env_t env;
+    vector_t /* core_expr_t */ expr_heap;
+    vector_init_with_cap(&expr_heap, sizeof(core_expr_t), 1024);
+
+    env_t env, intrinsics_env;
     env_init(&env);
+    env_init(&intrinsics_env);
 
-    core_expr_t program, putStrLn, show2, show, lit2;
-    program.form = CORE_APPL;
-    program.appl.fn = &putStrLn;
-    program.appl.arg = &show2;
+    intrinsics_load(&intrinsics_env, &expr_heap);
+    env.upper_scope = &intrinsics_env;
 
-    putStrLn.form = CORE_INTRINSIC;
-    putStrLn.intrinsic.name = "putStrLn";
+    coregen_from_module_ast(&ast, &env, &expr_heap);
 
-    show2.form = CORE_APPL;
-    show2.appl.fn = &show;
-    show2.appl.arg = &lit2;
+    vector_t /* const char * */ module_scope;
+    vector_init(&module_scope, sizeof(const char *));
 
-    show.form = CORE_INTRINSIC;
-    show.intrinsic.name = "show";
+    env_list_scope(&env, &module_scope, 0);
 
-    lit2.form = CORE_LITERAL;
-    lit2.literal.type = CORE_LITERAL_I64;
-    lit2.literal.i64 = 2;
+    for (size_t i = 0; i < module_scope.len; ++i) {
+        const char *varname = *(const char **)vector_get_ref(&module_scope, i);
 
-    // core_from_ast(&ast, &env, &program);
-    core_print(&env, &program, stdout);
+        const core_expr_t *expr = env_get_expr(&env, varname);
 
-    // core_destroy(&program);
+        printf("var %s\n", varname);
+        core_print(expr, stdout);
+    }
+
     env_destroy(&env);
     ast_destroy(&ast);
+    vector_destroy(&expr_heap);
+    vector_destroy(&module_scope);
 
     return 0;
 }

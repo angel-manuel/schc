@@ -21,7 +21,6 @@ typedef enum ast_rule_ {
     AST_CON,
     AST_LIT,
     AST_TUPLE,
-    AST_CONS,
     AST_ARITH_SEQ,
     AST_TYPE_DECL,
     AST_DATA_DECL,

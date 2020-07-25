@@ -79,6 +79,7 @@ int coregen_populate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
             core_expr_t *new_expr;
             TRYCR(new_expr, vector_push_back(expr_heap, &empty_tmpl), NULL, -1);
 
+            printf("PUT %s\n", fn_decl->name);
             new_expr->name = fn_decl->name;
 
             TRY(res, env_put_expr(env, fn_decl->name, new_expr));
@@ -130,14 +131,39 @@ int coregen_generate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
             break;
         }
         case AST_FN_DECL: {
-            // const ast_fn_decl_t *fn_decl = &decl->fn_decl;
-            // core_expr_t *expr;
+            const ast_fn_decl_t *fn_decl = &decl->fn_decl;
+            core_expr_t *expr;
 
-            // printf("fn %s\n", fn_decl->name);
+            printf("fn_decl %s\n", fn_decl->name);
 
-            // TRYCR(expr, env_get_expr(env, fn_decl->name), NULL, -1);
+            TRYCR(expr, env_get_expr(env, fn_decl->name), NULL, -1);
 
-            // TODO: Convert to lambda
+            expr->form = CORE_LAMBDA;
+            expr->name = fn_decl->name;
+            // TRYCR(expr->name, stralloc(fn_decl->name), NULL, -1);
+            core_lambda_t *lambda = &expr->lambda;
+
+            TRY(res, env_init(&lambda->args));
+            lambda->args.upper_scope = env;
+
+            for (size_t i = 0; i < fn_decl->vars.len; ++i) {
+                const char *varname =
+                    *(const char **)vector_get_ref(&fn_decl->vars, i);
+
+                core_expr_t *var_expr;
+                TRYCR(var_expr, vector_alloc_elem(expr_heap), NULL, -1);
+
+                var_expr->name = varname;
+                // TRYCR(var_expr->name, stralloc(varname), NULL, -1);
+                var_expr->form = CORE_PLACEHOLDER;
+
+                TRY(res, env_put_expr(&lambda->args, varname, var_expr));
+            }
+
+            TRYCR(lambda->body, vector_alloc_elem(expr_heap), NULL, -1);
+
+            TRY(res, coregen_from_ast(fn_decl->body, &lambda->args,
+                                      lambda->body, expr_heap));
 
             break;
         }
@@ -173,8 +199,19 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
     int res;
 
     expr->form = CORE_NO_FORM;
+    expr->name = NULL;
 
     switch (ast->rule) {
+    case AST_CON: {
+        const ast_con_t *con_ast = &ast->con;
+
+        expr->form = CORE_CONSTRUCTOR;
+        core_constructor_t *constructor = &expr->constructor;
+
+        TRYCR(constructor->name, stralloc(con_ast->name), NULL, -1);
+
+        break;
+    }
     case AST_NEG: {
         const ast_neg_t *neg_ast = &ast->neg;
 

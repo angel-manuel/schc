@@ -10,11 +10,15 @@
 
 typedef struct core_expr_ core_expr_t;
 
+#include "env.h"
+
 int core_print(const core_expr_t *expr, FILE *fp);
 void core_destroy(core_expr_t *expr);
 
 typedef enum core_expr_form_ {
     CORE_NO_FORM = 0,
+    CORE_PLACEHOLDER,
+    CORE_CONSTRUCTOR,
     CORE_INDIR,
     CORE_INTRINSIC,
     CORE_APPL,
@@ -22,6 +26,10 @@ typedef enum core_expr_form_ {
     CORE_LITERAL,
     CORE_COND,
 } core_expr_form_t;
+
+typedef struct core_constructor_ {
+    const char *name;
+} core_constructor_t;
 
 typedef struct core_indir_ {
     core_expr_t *target;
@@ -37,7 +45,7 @@ typedef struct core_appl_ {
 } core_appl_t;
 
 typedef struct core_lambda {
-    core_type_t type;
+    env_t args;
     core_expr_t *body;
 } core_lambda_t;
 
@@ -59,10 +67,11 @@ typedef struct core_cond_ {
 } core_cond_t;
 
 struct core_expr_ {
-    char *name;
+    const char *name;
     core_expr_form_t form;
     union {
         core_indir_t indir;
+        core_constructor_t constructor;
         core_intrinsic_t intrinsic;
         core_appl_t appl;
         core_lambda_t lambda;

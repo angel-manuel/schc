@@ -85,7 +85,7 @@ static char *test_hashmap_growth() {
 
 int destroys;
 
-void add_to_destroy(const void *elem) { destroys += *((const int *)elem); }
+void add_to_destroy(void *elem) { destroys += *((const int *)elem); }
 
 static char *test_hashmap_elem_destroy() {
     hashmap_t map;

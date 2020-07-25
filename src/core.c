@@ -52,6 +52,8 @@ void core_destroy(core_expr_t *expr) {
         core_destroy(lambda->body);
         free(lambda->body);
 
+        env_destroy(&lambda->args);
+
         break;
     }
     case CORE_COND: {
@@ -106,6 +108,12 @@ int core_print_indent(const core_expr_t *expr, FILE *fp, int indent,
     case CORE_NO_FORM:
         TRYNEG(res, fprintf(fp, "NO_FORM"));
         break;
+    case CORE_PLACEHOLDER:
+        TRYNEG(res, fprintf(fp, "PLACEHOLDER"));
+        break;
+    case CORE_CONSTRUCTOR:
+        TRYNEG(res, fprintf(fp, "@%s", expr->constructor.name));
+        break;
     case CORE_INDIR:
         TRY(res, core_print_indent(expr->indir.target, fp, indent, seen));
         break;
@@ -131,9 +139,9 @@ int core_print_indent(const core_expr_t *expr, FILE *fp, int indent,
     }
     case CORE_LAMBDA: {
         const core_lambda_t *lambda = &expr->lambda;
-        const char *typename;
+        const char *typename = "TODO";
 
-        TRYCR(typename, type_to_str(lambda->type), NULL, -1);
+        // TRYCR(typename, type_to_str(lambda->type), NULL, -1);
 
         TRYNEG(res, fprintf(fp, "LAMBDA {\n"));
 
