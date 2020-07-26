@@ -252,8 +252,9 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
         core_expr_t *op_expr = env_get_expr(env, op_appl_ast->op_name);
 
         if (op_expr == NULL) {
-            // CGFAIL("Operator not found: \"%s\"", op_appl_ast->op_name);
-            // return -1;
+            CGFAIL("Operator not found: \"%s\"", op_appl_ast->op_name);
+            return -1;
+
             TRYCR(op_expr, vector_alloc_elem(expr_heap), NULL, -1);
             op_expr->name = NULL;
             op_expr->form = CORE_INTRINSIC;
@@ -288,7 +289,7 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
 
         env_t *let_env;
         TRYCR(let_env, malloc(sizeof(env_t)), NULL, -1);
-        TRY(res, env_init(let_env))
+        TRY(res, env_init(let_env));
         let_env->upper_scope = env;
 
         TRY(res, coregen_populate_env(&let_ast->bindings, let_env, expr_heap));
@@ -332,6 +333,28 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
 
         expr->form = CORE_INDIR;
         expr->indir.target = var_expr;
+
+        break;
+    }
+    case AST_IF: {
+        const ast_if_t *if_ast = &ast->if_exp;
+
+        expr->form = CORE_COND;
+        core_cond_t *cond = &expr->cond;
+
+        TRYCR(cond->cond, vector_alloc_elem(expr_heap), NULL, -1);
+        TRYCR(cond->then_branch, vector_alloc_elem(expr_heap), NULL, -1);
+        TRYCR(cond->else_branch, vector_alloc_elem(expr_heap), NULL, -1);
+
+        DEBUG_PRINTF("alloc if complete\n");
+
+        TRY(res, coregen_from_ast(if_ast->cond, env, cond->cond, expr_heap));
+        TRY(res, coregen_from_ast(if_ast->then_branch, env, cond->then_branch,
+                                  expr_heap));
+        TRY(res, coregen_from_ast(if_ast->else_branch, env, cond->else_branch,
+                                  expr_heap));
+
+        DEBUG_PRINTF("coregen if complete\n");
 
         break;
     }

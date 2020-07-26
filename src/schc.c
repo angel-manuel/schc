@@ -5,6 +5,7 @@
 #include "core.h"
 #include "coregen.h"
 #include "data/hashmap.h"
+#include "intrinsics/intrinsics.h"
 #include "lexer.h"
 #include "parser.h"
 
@@ -54,11 +55,15 @@ int main(int argc, char *argv[]) {
     puts("========================================");
     puts("");
 
-    env_t env;
-    env_init(&env);
-
     vector_t /* core_expr_t */ expr_heap;
     vector_init_with_cap(&expr_heap, sizeof(core_expr_t), 100000);
+
+    env_t env, intrinsics_env;
+    env_init(&env);
+    env_init(&intrinsics_env);
+
+    intrinsics_load(&intrinsics_env, &expr_heap);
+    env.upper_scope = &intrinsics_env;
 
     if (coregen_from_module_ast(&ast, &env, &expr_heap) == -1) {
         fprintf(stderr, "Coregen error\n");

@@ -30,5 +30,13 @@ int intrinsics_load(env_t *env, vector_t /* core_expr_t */ *expr_heap) {
     TRYCR(expr, (core_expr_t *)vector_push_back(expr_heap, &show), NULL, -1);
     TRY(res, env_put_expr(env, "show", expr));
 
+    core_expr_t div;
+    div.name = "div";
+    div.form = CORE_INTRINSIC;
+    div.intrinsic.name = "div";
+
+    TRYCR(expr, (core_expr_t *)vector_push_back(expr_heap, &div), NULL, -1);
+    TRY(res, env_put_expr(env, "div", expr));
+
     return res;
 }
