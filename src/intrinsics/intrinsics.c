@@ -2,41 +2,80 @@
 
 #include <assert.h>
 
-#include "../data/vector.h"
+#include "../data/linalloc.h"
 #include "../env.h"
 #include "../util.h"
 
-int intrinsics_load(env_t *env, vector_t /* core_expr_t */ *expr_heap) {
+#define ALLOC(x) linalloc_alloc(linalloc, (x))
+
+int intrinsics_load(env_t *env, linalloc_t *linalloc) {
     assert(env != NULL);
-    assert(expr_heap != NULL);
+    assert(linalloc != NULL);
 
     int res;
-    core_expr_t *expr;
 
-    core_expr_t putStrLn;
-    putStrLn.name = "putStrLn";
-    putStrLn.form = CORE_INTRINSIC;
-    putStrLn.intrinsic.name = "putStrLn";
+    core_expr_t *putStrLn;
+    TRYCR(putStrLn, ALLOC(sizeof(core_expr_t)), NULL, -1);
 
-    TRYCR(expr, (core_expr_t *)vector_push_back(expr_heap, &putStrLn), NULL,
-          -1);
-    TRY(res, env_put_expr(env, "putStrLn", expr));
+    putStrLn->name = "putStrLn";
+    putStrLn->form = CORE_INTRINSIC;
+    putStrLn->intrinsic.name = "putStrLn";
 
-    core_expr_t show;
-    show.name = "show";
-    show.form = CORE_INTRINSIC;
-    show.intrinsic.name = "show";
+    TRY(res, env_put_expr(env, "putStrLn", putStrLn));
 
-    TRYCR(expr, (core_expr_t *)vector_push_back(expr_heap, &show), NULL, -1);
-    TRY(res, env_put_expr(env, "show", expr));
+    core_expr_t *show;
+    TRYCR(show, ALLOC(sizeof(core_expr_t)), NULL, -1);
 
-    core_expr_t div;
-    div.name = "div";
-    div.form = CORE_INTRINSIC;
-    div.intrinsic.name = "div";
+    show->name = "show";
+    show->form = CORE_INTRINSIC;
+    show->intrinsic.name = "show";
 
-    TRYCR(expr, (core_expr_t *)vector_push_back(expr_heap, &div), NULL, -1);
-    TRY(res, env_put_expr(env, "div", expr));
+    TRY(res, env_put_expr(env, "show", show));
+
+    core_expr_t *div;
+    TRYCR(div, ALLOC(sizeof(core_expr_t)), NULL, -1);
+
+    div->name = "div";
+    div->form = CORE_INTRINSIC;
+    div->intrinsic.name = "div";
+
+    TRY(res, env_put_expr(env, "div", div));
+
+    core_expr_t *plus;
+    TRYCR(plus, ALLOC(sizeof(core_expr_t)), NULL, -1);
+
+    plus->name = "+";
+    plus->form = CORE_INTRINSIC;
+    plus->intrinsic.name = "plus";
+
+    TRY(res, env_put_expr(env, "+", plus));
+
+    core_expr_t *minus;
+    TRYCR(minus, ALLOC(sizeof(core_expr_t)), NULL, -1);
+
+    minus->name = "-";
+    minus->form = CORE_INTRINSIC;
+    minus->intrinsic.name = "minus";
+
+    TRY(res, env_put_expr(env, "-", minus));
+
+    core_expr_t *mult;
+    TRYCR(mult, ALLOC(sizeof(core_expr_t)), NULL, -1);
+
+    mult->name = "*";
+    mult->form = CORE_INTRINSIC;
+    mult->intrinsic.name = "mult";
+
+    TRY(res, env_put_expr(env, "*", mult));
+
+    core_expr_t *gte;
+    TRYCR(gte, ALLOC(sizeof(core_expr_t)), NULL, -1);
+
+    gte->name = ">=";
+    gte->form = CORE_INTRINSIC;
+    gte->intrinsic.name = "gte";
+
+    TRY(res, env_put_expr(env, ">=", gte));
 
     return res;
 }

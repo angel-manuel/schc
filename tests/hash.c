@@ -2,14 +2,18 @@
 #include <stdio.h>
 
 #include <data/hashmap.h>
+#include <data/linalloc.h>
 
 #include <test.h>
+
+allocator_t *allocator;
 
 static char *test_hashmap_init_with_cap() {
     hashmap_t map;
 
     test_assert("Hashmap is initialized",
-                !hashmap_init_with_cap(&map, sizeof(int), 2048, NULL));
+                !hashmap_init_with_cap_and_allocator(&map, sizeof(int), 2048,
+                                                     allocator, NULL));
 
     test_assert("Hashmap has chosen capacity", map.cap == 2048);
     test_assert("Hashmap has chosen elem_size", map.elem_size == sizeof(int));
@@ -34,7 +38,8 @@ static char *test_hashmap_simple_get_and_put() {
     hashmap_t map;
 
     test_assert("Hashmap is initialized",
-                !hashmap_init(&map, sizeof(int), NULL));
+                !hashmap_init_with_cap_and_allocator(&map, sizeof(int), 1024,
+                                                     allocator, NULL));
 
     test_assert("put(hello, 42)", !hashmap_put(&map, "hello", &i42));
     test_assert("", map.len == 1);
@@ -60,7 +65,8 @@ static char *test_hashmap_growth() {
     hashmap_t map;
 
     test_assert("Hashmap initialized with 256 capacity",
-                !hashmap_init_with_cap(&map, sizeof(int), 256, NULL));
+                !hashmap_init_with_cap_and_allocator(&map, sizeof(int), 256,
+                                                     allocator, NULL));
 
     for (int i = 0; i < 1500; i++) {
         char key[10];
@@ -91,7 +97,8 @@ static char *test_hashmap_elem_destroy() {
     hashmap_t map;
 
     test_assert("Hashmap is initialized",
-                !hashmap_init(&map, sizeof(int), add_to_destroy));
+                !hashmap_init_with_cap_and_allocator(
+                    &map, sizeof(int), 1024, allocator, add_to_destroy));
 
     destroys = 0;
 
@@ -111,10 +118,26 @@ static char *test_hashmap_elem_destroy() {
 }
 
 int main() {
+    allocator = &default_allocator;
+
     test_run(test_hashmap_init_with_cap);
     test_run(test_hashmap_simple_get_and_put);
     test_run(test_hashmap_growth);
     test_run(test_hashmap_elem_destroy);
+
+    linalloc_t linalloc;
+    linalloc_init(&linalloc);
+
+    allocator_t special_allocator;
+    linalloc_allocator(&linalloc, &special_allocator);
+    allocator = &special_allocator;
+
+    test_run(test_hashmap_init_with_cap);
+    test_run(test_hashmap_simple_get_and_put);
+    test_run(test_hashmap_growth);
+    test_run(test_hashmap_elem_destroy);
+
+    linalloc_destroy(&linalloc);
 
     return 0;
 }

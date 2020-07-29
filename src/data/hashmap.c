@@ -10,6 +10,11 @@
 #define HASHMAP_DEFAULT_CAP 1024
 #define FIBONACCI_MULT UINT64_C(11400714819323198486)
 
+#define ALLOC(size) ALLOCATOR_ALLOC(hashmap->allocator, (size))
+#define STRALLOC(str) ALLOCATOR_STRALLOC(hashmap->allocator, (str))
+#define REALLOC(ptr, size) ALLOCATOR_REALLOC(hashmap->allocator, (ptr), (size))
+#define FREE(mem) ALLOCATOR_FREE(hashmap->allocator, (mem))
+
 typedef struct hashmap_location_ {
     char *key;
     unsigned char data[0];
@@ -31,10 +36,19 @@ int hashmap_init(hashmap_t *hashmap, size_t elem_size,
 int hashmap_init_with_cap(hashmap_t *hashmap, size_t elem_size,
                           size_t initial_capacity,
                           void (*elem_destroy)(void *)) {
+    return hashmap_init_with_cap_and_allocator(
+        hashmap, elem_size, initial_capacity, &default_allocator, elem_destroy);
+}
+
+int hashmap_init_with_cap_and_allocator(hashmap_t *hashmap, size_t elem_size,
+                                        size_t initial_capacity,
+                                        allocator_t *allocator,
+                                        void (*elem_destroy)(void *)) {
 
     assert(hashmap != NULL);
     assert(elem_size >= 0);
     assert(initial_capacity >= 256);
+    assert(allocator != NULL);
 
     size_t cap = 256;
     int cap_pow = 8;
@@ -44,19 +58,21 @@ int hashmap_init_with_cap(hashmap_t *hashmap, size_t elem_size,
         cap_pow++;
     }
 
+    hashmap->allocator = allocator;
     hashmap->len = 0;
     hashmap->cap = cap;
     hashmap->elem_size = elem_size;
     hashmap->cap_pow = cap_pow;
     hashmap->elem_destroy = elem_destroy;
 
-    TRYCR(hashmap->mem, malloc(cap * (sizeof(hashmap_location_t) + elem_size)),
+    TRYCR(hashmap->mem, ALLOC(cap * (sizeof(hashmap_location_t) + elem_size)),
           NULL, -1);
 
     memset(hashmap->mem, 0, (sizeof(hashmap_location_t) + elem_size) * cap);
 
     int res;
-    TRY(res, vector_init_with_cap(&hashmap->keys, sizeof(const char *), cap));
+    TRY(res, vector_init_with_cap_and_allocator(
+                 &hashmap->keys, sizeof(const char *), cap, allocator));
 
     return 0;
 }
@@ -70,7 +86,7 @@ void hashmap_destroy(hashmap_t *hashmap) {
         hashmap_location_t *loc = hashmap_get_entry(hashmap, i, NULL);
 
         if (loc != NULL && loc->key != NULL) {
-            free(loc->key);
+            FREE(loc->key);
 
             if (hashmap->elem_destroy) {
                 hashmap->elem_destroy(&loc->data);
@@ -78,7 +94,7 @@ void hashmap_destroy(hashmap_t *hashmap) {
         }
     }
 
-    free(hashmap->mem);
+    FREE(hashmap->mem);
 
     vector_destroy(&hashmap->keys);
 }
@@ -96,7 +112,7 @@ int hashmap_put(hashmap_t *hashmap, const char *key, const void *elem) {
 
     char *owned_key;
 
-    TRYCR(owned_key, stralloc(key), NULL, -1);
+    TRYCR(owned_key, STRALLOC(key), NULL, -1);
 
     return hashmap_put_no_alloc(hashmap, owned_key, elem);
 }
@@ -117,7 +133,7 @@ int hashmap_put_no_alloc(hashmap_t *hashmap, char *key, const void *elem) {
 
     while (loc->key) {
         if (strcmp(loc->key, key) == 0) {
-            free(loc->key);
+            FREE(loc->key);
             hashmap->len--;
             key_exists = 1;
             break;
@@ -184,7 +200,7 @@ int hashmap_grow(hashmap_t *hashmap) {
     void *new_mem;
 
     TRYCR(new_mem,
-          malloc(new_cap * (sizeof(hashmap_location_t) + hashmap->elem_size)),
+          ALLOC(new_cap * (sizeof(hashmap_location_t) + hashmap->elem_size)),
           NULL, -1);
     memset(new_mem, 0,
            new_cap * (sizeof(hashmap_location_t) + hashmap->elem_size));
@@ -203,7 +219,7 @@ int hashmap_grow(hashmap_t *hashmap) {
         }
     }
 
-    free(old_mem);
+    FREE(old_mem);
 
     return 0;
 }

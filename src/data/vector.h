@@ -3,7 +3,10 @@
 
 #include <stdlib.h>
 
+#include "allocator.h"
+
 typedef struct vector_ {
+    allocator_t *allocator;
     void *mem;
     size_t len;
     size_t cap;
@@ -13,6 +16,9 @@ typedef struct vector_ {
 int vector_init(vector_t *vector, size_t elem_size);
 int vector_init_with_cap(vector_t *vector, size_t elem_size,
                          size_t initial_capacity);
+int vector_init_with_cap_and_allocator(vector_t *vector, size_t elem_size,
+                                       size_t initial_capacity,
+                                       allocator_t *allocator);
 void vector_destroy(vector_t *vector);
 
 const void *vector_get_ref(const vector_t *vector, size_t index);

@@ -12,10 +12,6 @@ typedef size_t yy_size_t;
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 extern YY_BUFFER_STATE yy_scan_string(char *str);
 
-// char PROGRAM[] = "              \n\
-// main = putStrLn (show 2)        \n\
-// ";
-
 char PROGRAM[] = "              \n\
 main = putStrLn (show (f 3))    \n\
                                 \n\
@@ -32,22 +28,23 @@ int main() {
 
     parser_parse(&parser, &ast);
 
-    parser_destroy(&parser);
-    yylex_destroy();
-
     ast_print(&ast, stdout);
 
-    vector_t /* core_expr_t */ expr_heap;
-    vector_init_with_cap(&expr_heap, sizeof(core_expr_t), 1024);
+    yylex_destroy();
+
+    linalloc_t linalloc;
+    linalloc_init(&linalloc);
 
     env_t env, intrinsics_env;
     env_init(&env);
     env_init(&intrinsics_env);
 
-    intrinsics_load(&intrinsics_env, &expr_heap);
+    intrinsics_load(&intrinsics_env, &linalloc);
     env.upper_scope = &intrinsics_env;
 
-    coregen_from_module_ast(&ast, &env, &expr_heap);
+    coregen_from_module_ast(&ast, &env, &linalloc);
+
+    parser_destroy(&parser);
 
     vector_t /* const char * */ module_scope;
     vector_init(&module_scope, sizeof(const char *));
@@ -65,8 +62,8 @@ int main() {
 
     env_destroy(&env);
     ast_destroy(&ast);
-    vector_destroy(&expr_heap);
     vector_destroy(&module_scope);
+    linalloc_destroy(&linalloc);
 
     return 0;
 }

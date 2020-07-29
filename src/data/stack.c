@@ -6,8 +6,19 @@
 
 int stack_init(stack_t *stack, size_t elem_size) {
     assert(stack != NULL);
+    assert(elem_size >= 0);
 
-    return vector_init(&stack->vector, elem_size);
+    return stack_init_with_allocator(stack, elem_size, &default_allocator);
+}
+
+int stack_init_with_allocator(stack_t *stack, size_t elem_size,
+                              allocator_t *allocator) {
+    assert(stack != NULL);
+    assert(elem_size >= 0);
+    assert(allocator != NULL);
+
+    return vector_init_with_cap_and_allocator(&stack->vector, elem_size, 32,
+                                              allocator);
 }
 
 void stack_destroy(stack_t *stack) {

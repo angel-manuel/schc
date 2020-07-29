@@ -1,6 +1,8 @@
 #ifndef SCHC_UTIL_H_
 #define SCHC_UTIL_H_
 
+#include <signal.h>
+
 #ifdef DEBUG
 #define DEBUG_PRINTF(...)                                                      \
     do {                                                                       \
@@ -23,6 +25,7 @@
     do {                                                                       \
         (var) = (exp);                                                         \
         if ((var) == (cond)) {                                                 \
+            raise(SIGINT);                                                     \
             return (ret);                                                      \
         }                                                                      \
     } while (0)
@@ -31,6 +34,7 @@
     do {                                                                       \
         (var) = (exp);                                                         \
         if ((var) < 0) {                                                       \
+            raise(SIGINT);                                                     \
             return -1;                                                         \
         }                                                                      \
     } while (0)

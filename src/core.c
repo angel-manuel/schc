@@ -33,16 +33,19 @@ void core_destroy(core_expr_t *expr) {
     assert(expr != NULL);
 
     switch (expr->form) {
-    case CORE_INDIR:
-        core_destroy(expr->indir.target);
+    case CORE_INDIR: {
+        core_expr_t *target = expr->indir.target;
+        // expr->indir.target = NULL;
+        core_destroy(target);
         break;
+    }
     case CORE_APPL: {
         core_appl_t *appl = &expr->appl;
 
         core_destroy(appl->fn);
-        free(appl->fn);
+        // free(appl->fn);
         core_destroy(appl->arg);
-        free(appl->arg);
+        // free(appl->arg);
 
         break;
     }
@@ -50,7 +53,7 @@ void core_destroy(core_expr_t *expr) {
         core_lambda_t *lambda = &expr->lambda;
 
         core_destroy(lambda->body);
-        free(lambda->body);
+        // free(lambda->body);
 
         env_destroy(&lambda->args);
 
@@ -60,11 +63,11 @@ void core_destroy(core_expr_t *expr) {
         core_cond_t *cond = &expr->cond;
 
         core_destroy(cond->cond);
-        free(cond->cond);
+        // free(cond->cond);
         core_destroy(cond->then_branch);
-        free(cond->then_branch);
+        // free(cond->then_branch);
         core_destroy(cond->else_branch);
-        free(cond->else_branch);
+        // free(cond->else_branch);
 
         break;
     }

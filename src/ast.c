@@ -25,17 +25,17 @@ void ast_destroy(ast_t *node) {
         ast_module_t *module = &node->module;
 
         if (module->modid != NULL) {
-            free(module->modid);
+            // free(module->modid);
         }
 
         for (int i = 0; i < module->exports.len; ++i) {
-            const ast_export_t *export = vector_get_ref(&module->exports, i);
-            free(export->exportid);
+            // const ast_export_t *export = vector_get_ref(&module->exports, i);
+            // free(export->exportid);
         }
         vector_destroy(&module->exports);
 
         ast_destroy(module->body);
-        free(module->body);
+        // free(module->body);
         break;
     }
     case AST_BODY: {
@@ -57,30 +57,30 @@ void ast_destroy(ast_t *node) {
         ast_fn_appl_t *fn_appl = &node->fn_appl;
 
         ast_destroy(fn_appl->arg);
-        free(fn_appl->arg);
+        // free(fn_appl->arg);
         ast_destroy(fn_appl->fn);
-        free(fn_appl->fn);
+        // free(fn_appl->fn);
         break;
     }
     case AST_OP_APPL: {
         ast_op_appl_t *op_appl = &node->op_appl;
 
-        free(op_appl->op_name);
+        // free(op_appl->op_name);
         ast_destroy(op_appl->lhs);
-        free(op_appl->lhs);
+        // free(op_appl->lhs);
         ast_destroy(op_appl->rhs);
-        free(op_appl->rhs);
+        // free(op_appl->rhs);
         break;
     }
     case AST_IF: {
         ast_if_t *if_exp = &node->if_exp;
 
         ast_destroy(if_exp->else_branch);
-        free(if_exp->else_branch);
+        // free(if_exp->else_branch);
         ast_destroy(if_exp->then_branch);
-        free(if_exp->then_branch);
+        // free(if_exp->then_branch);
         ast_destroy(if_exp->cond);
-        free(if_exp->cond);
+        // free(if_exp->cond);
 
         break;
     }
@@ -99,7 +99,7 @@ void ast_destroy(ast_t *node) {
 
         if (let->body != NULL) {
             ast_destroy(let->body);
-            free(let->body);
+            // free(let->body);
         }
 
         for (int i = 0; i < let->bindings.len; ++i) {
@@ -110,16 +110,16 @@ void ast_destroy(ast_t *node) {
         break;
     }
     case AST_VAR: {
-        ast_var_t *var = &node->var;
+        // ast_var_t *var = &node->var;
 
-        free(var->name);
+        // free(var->name);
 
         break;
     }
     case AST_CON: {
-        ast_con_t *con = &node->con;
+        // ast_con_t *con = &node->con;
 
-        free(con->name);
+        // free(con->name);
 
         break;
     }
@@ -127,14 +127,14 @@ void ast_destroy(ast_t *node) {
         ast_lit_t *lit = &node->lit;
 
         if (lit->lit_type == AST_LIT_TYPE_STR) {
-            free(lit->str_lit);
+            // free(lit->str_lit);
         }
         break;
     }
     case AST_FIXITY_DECL: {
-        ast_fixity_decl_t *fixity_decl = &node->fixity_decl;
+        // ast_fixity_decl_t *fixity_decl = &node->fixity_decl;
 
-        free(fixity_decl->op);
+        // free(fixity_decl->op);
 
         break;
     }
@@ -142,14 +142,14 @@ void ast_destroy(ast_t *node) {
         ast_fn_decl_t *fn_decl = &node->fn_decl;
 
         ast_destroy(fn_decl->body);
-        free(fn_decl->body);
+        // free(fn_decl->body);
 
         for (int i = 0; i < fn_decl->vars.len; ++i) {
-            free(*(char **)vector_get_ref(&fn_decl->vars, i));
+            // free(*(char **)vector_get_ref(&fn_decl->vars, i));
         }
         vector_destroy(&fn_decl->vars);
 
-        free(fn_decl->name);
+        // free(fn_decl->name);
 
         break;
     }
@@ -157,9 +157,9 @@ void ast_destroy(ast_t *node) {
         ast_val_decl_t *val_decl = &node->val_decl;
 
         ast_destroy(val_decl->body);
-        free(val_decl->body);
+        // free(val_decl->body);
 
-        free(val_decl->name);
+        // free(val_decl->name);
 
         break;
     }
@@ -167,9 +167,9 @@ void ast_destroy(ast_t *node) {
         ast_has_type_decl_t *has_type_decl = &node->has_type_decl;
 
         ast_destroy(has_type_decl->type_exp);
-        free(has_type_decl->type_exp);
+        // free(has_type_decl->type_exp);
 
-        free(has_type_decl->symbol_name);
+        // free(has_type_decl->symbol_name);
 
         break;
     }

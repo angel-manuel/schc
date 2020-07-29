@@ -3,9 +3,11 @@
 
 #include <stdlib.h>
 
+#include "allocator.h"
 #include "vector.h"
 
 typedef struct hashmap_ {
+    allocator_t *allocator;
     size_t cap;
     size_t len;
     size_t elem_size;
@@ -20,6 +22,10 @@ int hashmap_init(hashmap_t *hashmap, size_t elem_size,
 int hashmap_init_with_cap(hashmap_t *hashmap, size_t elem_size,
                           size_t initial_capacity,
                           void (*elem_destroy)(void *));
+int hashmap_init_with_cap_and_allocator(hashmap_t *hashmap, size_t elem_size,
+                                        size_t initial_capacity,
+                                        allocator_t *allocator,
+                                        void (*elem_destroy)(void *));
 void hashmap_destroy(hashmap_t *hashmap);
 
 const vector_t /* const char * */ *hashmap_keys(const hashmap_t *hashmap);

@@ -2,6 +2,7 @@
 #define SCHC_PARSER_H_
 
 #include "ast.h"
+#include "data/linalloc.h"
 #include "data/stack.h"
 #include "lexer.h"
 
@@ -16,6 +17,7 @@ typedef struct parser_ {
     char *ptext;
     parser_flags_t flags;
     stack_t /*int*/ indent_stack;
+    linalloc_t linalloc;
 } parser_t;
 
 int parser_init(parser_t *parser);

@@ -5,6 +5,7 @@
 #include "core.h"
 #include "coregen.h"
 #include "data/hashmap.h"
+#include "data/linalloc.h"
 #include "intrinsics/intrinsics.h"
 #include "lexer.h"
 #include "parser.h"
@@ -44,6 +45,7 @@ int main(int argc, char *argv[]) {
     if (parser_parse(&parser, &ast) == -1) {
         fprintf(stderr, "Parse error(%d, %d): %s unexpected\n", yylineno,
                 yycolumn, strtoken(parser.token));
+        fclose(input);
         return 1;
     }
 
@@ -55,20 +57,25 @@ int main(int argc, char *argv[]) {
     puts("========================================");
     puts("");
 
-    vector_t /* core_expr_t */ expr_heap;
-    vector_init_with_cap(&expr_heap, sizeof(core_expr_t), 100000);
+    linalloc_t linalloc;
+    linalloc_init(&linalloc);
 
     env_t env, intrinsics_env;
     env_init(&env);
     env_init(&intrinsics_env);
 
-    intrinsics_load(&intrinsics_env, &expr_heap);
+    intrinsics_load(&intrinsics_env, &linalloc);
     env.upper_scope = &intrinsics_env;
 
-    if (coregen_from_module_ast(&ast, &env, &expr_heap) == -1) {
+    if (coregen_from_module_ast(&ast, &env, &linalloc) == -1) {
         fprintf(stderr, "Coregen error\n");
+        fclose(input);
         return 1;
     }
+
+    ast_destroy(&ast);
+
+    parser_destroy(&parser);
 
     puts("EXPRs:");
     puts("========================================");
@@ -80,6 +87,7 @@ int main(int argc, char *argv[]) {
         const core_expr_t *expr =
             *((const core_expr_t **)hashmap_get(&env.scope, expr_name));
 
+        printf("%s => ", expr_name);
         core_print(expr, stdout);
         puts("");
     }
@@ -87,15 +95,19 @@ int main(int argc, char *argv[]) {
     puts("========================================");
     puts("");
 
-    vector_destroy(&expr_heap);
+    // for (size_t i = 0; i < keys->len; ++i) {
+    //     const char *expr_name = *((const char **)vector_get_ref(keys, i));
+    //     core_expr_t *expr =
+    //         *((core_expr_t **)hashmap_get(&env.scope, expr_name));
+
+    //     printf("Destroying %s\n", expr_name);
+    //     core_destroy(expr);
+    // }
 
     env_destroy(&env);
 
-    ast_destroy(&ast);
+    linalloc_destroy(&linalloc);
 
-    parser_destroy(&parser);
-
-    // printf("input = %p\n", input);
     fclose(input);
 
     return 0;
