@@ -9,14 +9,20 @@
 #define ENV_INITIAL_CAPACITY 1024
 
 int env_init(env_t *env) {
+    return env_init_with_allocator(env, &default_allocator);
+}
+
+int env_init_with_allocator(env_t *env, allocator_t *allocator) {
     assert(env != NULL);
+    assert(allocator != NULL);
 
     int res;
 
     env->upper_scope = NULL;
 
-    TRY(res, hashmap_init_with_cap(&env->scope, sizeof(core_expr_t *),
-                                   ENV_INITIAL_CAPACITY, NULL));
+    TRY(res, hashmap_init_with_cap_and_allocator(
+                 &env->scope, sizeof(core_expr_t *), ENV_INITIAL_CAPACITY,
+                 allocator, NULL));
 
     return 0;
 }
@@ -98,6 +104,8 @@ int env_print_scope(const env_t *env, int recursive, FILE *fp) {
 
         TRYNEG(res, fprintf(fp, "%s\n", varname));
     }
+
+    vector_destroy(&scope);
 
     return res;
 }

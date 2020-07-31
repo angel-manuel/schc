@@ -8,8 +8,8 @@
 #include "lexer.h"
 #include "util.h"
 
-#define ALLOC(x) linalloc_alloc(&parser->linalloc, (x))
-#define STRALLOC(x) linalloc_stralloc(&parser->linalloc, (x))
+#define ALLOC(x) ALLOCATOR_ALLOC(parser->allocator, (x))
+#define STRALLOC(x) ALLOCATOR_STRALLOC(parser->allocator, (x))
 
 #define PFAIL(fail)                                                            \
     fprintf(stderr, "Parser FAIL(%s:%d): %s\n", __FILE__, __LINE__, fail);
@@ -78,8 +78,6 @@ int parser_init(parser_t *parser) {
     parser->flags = PARSER_NONE;
     TRY(res, stack_init(&parser->indent_stack, sizeof(int)));
 
-    TRY(res, linalloc_init(&parser->linalloc));
-
     return 0;
 }
 
@@ -91,17 +89,20 @@ void parser_destroy(parser_t *parser) {
     }
 
     stack_destroy(&parser->indent_stack);
-
-    linalloc_destroy(&parser->linalloc);
 }
 
-int parser_parse(parser_t *parser, ast_t *root) {
+int parser_parse(parser_t *parser, ast_t *root, allocator_t *allocator) {
     assert(parser != NULL);
+    assert(root != NULL);
+    assert(allocator != NULL);
 
+    parser->allocator = allocator;
     parser->token = yylex();
     TRYCR(parser->ptext, STRALLOC(yytext), NULL, -1);
 
     int res = module(parser, root);
+
+    parser->allocator = NULL;
 
     if (res == -1) {
         return -1;
@@ -301,7 +302,8 @@ int module(parser_t *parser, ast_t *node) {
     int res;
     ast_module_t *module = &node->module;
     module->modid = NULL;
-    TRY(res, vector_init(&module->exports, sizeof(ast_export_t)));
+    TRY(res, vector_init_with_allocator(&module->exports, sizeof(ast_export_t),
+                                        parser->allocator));
 
     TRYP(res, maybe(soft(accept(parser, TOK_MODULE))));
 
@@ -363,7 +365,8 @@ int body(parser_t *parser, ast_t *node) {
     int res;
     ast_body_t *body = &node->body;
 
-    TRY(res, vector_init(&body->topdecls, sizeof(ast_t)));
+    TRY(res, vector_init_with_allocator(&body->topdecls, sizeof(ast_t),
+                                        parser->allocator));
 
     TRYP(res, identable(parser, &body->topdecls, declaration));
 
@@ -400,7 +403,8 @@ int function(parser_t *parser, char *decl_name, ast_t *node) {
     ast_fn_decl_t *fn_decl = &node->fn_decl;
 
     fn_decl->name = decl_name;
-    TRY(res, vector_init(&fn_decl->vars, sizeof(char *)));
+    TRY(res, vector_init_with_allocator(&fn_decl->vars, sizeof(char *),
+                                        parser->allocator));
 
     do {
         char *var_name = parser_get_text(parser);
@@ -421,7 +425,8 @@ int function(parser_t *parser, char *decl_name, ast_t *node) {
 
         ast_let_t *let = &fn_decl->body->let;
         let->body = body;
-        TRY(res, vector_init(&let->bindings, sizeof(ast_t)));
+        TRY(res, vector_init_with_allocator(&let->bindings, sizeof(ast_t),
+                                            parser->allocator));
 
         TRYP(res, bindings(parser, &let->bindings));
 
@@ -458,7 +463,8 @@ int value(parser_t *parser, char *decl_name, ast_t *node) {
 
         ast_let_t *let = &val_decl->body->let;
         let->body = body;
-        TRY(res, vector_init(&let->bindings, sizeof(ast_t)));
+        TRY(res, vector_init_with_allocator(&let->bindings, sizeof(ast_t),
+                                            parser->allocator));
 
         TRYP(res, bindings(parser, &let->bindings));
 
@@ -541,7 +547,8 @@ int let_exp(parser_t *parser, ast_t *node) {
 
     ast_let_t *let_expr = &node->let;
 
-    TRY(res, vector_init(&let_expr->bindings, sizeof(ast_t)));
+    TRY(res, vector_init_with_allocator(&let_expr->bindings, sizeof(ast_t),
+                                        parser->allocator));
 
     TRYP(res, bindings(parser, &let_expr->bindings));
 
@@ -604,7 +611,8 @@ int do_exp(parser_t *parser, ast_t *node) {
 
     ast_do_t *do_exp = &node->do_exp;
 
-    TRY(res, vector_init(&do_exp->steps, sizeof(ast_t)));
+    TRY(res, vector_init_with_allocator(&do_exp->steps, sizeof(ast_t),
+                                        parser->allocator));
 
     TRYP(res, identable(parser, &do_exp->steps, do_step));
 
@@ -622,7 +630,8 @@ int do_let_exp(parser_t *parser, ast_t *node) {
 
     ast_let_t *let = &node->let;
 
-    TRY(res, vector_init(&let->bindings, sizeof(ast_t)));
+    TRY(res, vector_init_with_allocator(&let->bindings, sizeof(ast_t),
+                                        parser->allocator));
     let->body = NULL;
 
     TRYP(res, bindings(parser, &let->bindings));

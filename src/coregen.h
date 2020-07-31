@@ -5,9 +5,10 @@
 #include "core.h"
 #include "env.h"
 
+#include "data/allocator.h"
 #include "data/hashmap.h"
-#include "data/linalloc.h"
 
-int coregen_from_module_ast(const ast_t *ast, env_t *env, linalloc_t *alloc);
+int coregen_from_module_ast(const ast_t *ast, env_t *env,
+                            allocator_t *allocator);
 
 #endif /*SCHC_COREGEN_H_*/

@@ -24,25 +24,31 @@ int main() {
     yy_scan_string(PROGRAM);
     parser_init(&parser);
 
-    ast_t ast;
+    allocator_t parser_allocator;
+    linalloc_t parser_linalloc;
+    linalloc_init(&parser_linalloc);
+    linalloc_allocator(&parser_linalloc, &parser_allocator);
 
-    parser_parse(&parser, &ast);
+    ast_t ast;
+    parser_parse(&parser, &ast, &parser_allocator);
 
     ast_print(&ast, stdout);
 
     yylex_destroy();
 
+    allocator_t core_allocator;
     linalloc_t linalloc;
     linalloc_init(&linalloc);
+    linalloc_allocator(&linalloc, &core_allocator);
 
     env_t env, intrinsics_env;
-    env_init(&env);
-    env_init(&intrinsics_env);
+    env_init_with_allocator(&env, &core_allocator);
+    env_init_with_allocator(&intrinsics_env, &core_allocator);
 
     intrinsics_load(&intrinsics_env, &linalloc);
     env.upper_scope = &intrinsics_env;
 
-    coregen_from_module_ast(&ast, &env, &linalloc);
+    coregen_from_module_ast(&ast, &env, &core_allocator);
 
     parser_destroy(&parser);
 
@@ -60,9 +66,10 @@ int main() {
         core_print(expr, stdout);
     }
 
-    env_destroy(&env);
-    ast_destroy(&ast);
+    // env_destroy(&env);
+    // ast_destroy(&ast);
     vector_destroy(&module_scope);
+    linalloc_destroy(&parser_linalloc);
     linalloc_destroy(&linalloc);
 
     return 0;

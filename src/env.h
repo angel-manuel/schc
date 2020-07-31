@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <stdio.h>
 
+#include "data/allocator.h"
 #include "data/hashmap.h"
 #include "data/vector.h"
 
@@ -15,6 +16,7 @@ typedef struct env_ {
 #include "core.h"
 
 int env_init(env_t *env);
+int env_init_with_allocator(env_t *env, allocator_t *allocator);
 void env_destroy(env_t *env);
 
 core_expr_t *env_get_expr(env_t *env, const char *symbol);

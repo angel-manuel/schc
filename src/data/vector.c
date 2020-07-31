@@ -20,11 +20,22 @@ int vector_init_with_cap(vector_t *vector, size_t elem_size,
         vector, elem_size, initial_capacity, &default_allocator);
 }
 
+int vector_init_with_allocator(vector_t *vector, size_t elem_size,
+                               allocator_t *allocator) {
+    assert(vector != NULL);
+    assert(elem_size > 0);
+    assert(allocator != NULL);
+
+    return vector_init_with_cap_and_allocator(
+        vector, elem_size, VECTOR_DEFAULT_INITIAL_CAP, allocator);
+}
+
 int vector_init_with_cap_and_allocator(vector_t *vector, size_t elem_size,
                                        size_t initial_capacity,
                                        allocator_t *allocator) {
     assert(vector != NULL);
     assert(elem_size > 0);
+    assert(initial_capacity >= 0);
     assert(allocator != NULL);
 
     vector->allocator = allocator;

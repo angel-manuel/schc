@@ -16,6 +16,8 @@ typedef struct vector_ {
 int vector_init(vector_t *vector, size_t elem_size);
 int vector_init_with_cap(vector_t *vector, size_t elem_size,
                          size_t initial_capacity);
+int vector_init_with_allocator(vector_t *vector, size_t elem_size,
+                               allocator_t *allocator);
 int vector_init_with_cap_and_allocator(vector_t *vector, size_t elem_size,
                                        size_t initial_capacity,
                                        allocator_t *allocator);
