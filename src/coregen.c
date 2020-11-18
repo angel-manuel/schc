@@ -134,11 +134,6 @@ int coregen_generate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
             const ast_fn_decl_t *fn_decl = &decl->fn_decl;
             core_expr_t *expr;
 
-            printf("---------------\n");
-            printf("upper = %p\n", env->upper_scope);
-            env_print_scope(env, 1, stdout);
-            printf("---------------\n\n\n");
-
             TRYCR(expr, env_get_expr(env, fn_decl->name), NULL, -1);
 
             expr->form = CORE_LAMBDA;

@@ -77,5 +77,23 @@ int intrinsics_load(env_t *env, linalloc_t *linalloc) {
 
     TRY(res, env_put_expr(env, ">=", gte));
 
+    core_expr_t *lte;
+    TRYCR(lte, ALLOC(sizeof(core_expr_t)), NULL, -1);
+
+    lte->name = "<=";
+    lte->form = CORE_INTRINSIC;
+    lte->intrinsic.name = "lte";
+
+    TRY(res, env_put_expr(env, "<=", lte));
+
+    core_expr_t *eq;
+    TRYCR(eq, ALLOC(sizeof(core_expr_t)), NULL, -1);
+
+    eq->name = "==";
+    eq->form = CORE_INTRINSIC;
+    eq->intrinsic.name = "eq";
+
+    TRY(res, env_put_expr(env, "==", eq));
+
     return res;
 }

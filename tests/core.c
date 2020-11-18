@@ -16,7 +16,12 @@ char PROGRAM[] = "              \n\
 main = putStrLn (show (f 3))    \n\
                                 \n\
 f x = x * 2                     \n\
+                                \n\
+                                \n\
 ";
+// fem n = if n == 0 then 0 else n - male (fem (n - 1))  \n\
+// male n = if n == 0 then 0 else n - fem (male (n - 1)) \n\
+// ";
 
 int main() {
     parser_t parser;
