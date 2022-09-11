@@ -10,11 +10,6 @@
 #define HASHMAP_DEFAULT_CAP 1024
 #define FIBONACCI_MULT UINT64_C(11400714819323198486)
 
-#define ALLOC(size) ALLOCATOR_ALLOC(hashmap->allocator, (size))
-#define STRALLOC(str) ALLOCATOR_STRALLOC(hashmap->allocator, (str))
-#define REALLOC(ptr, size) ALLOCATOR_REALLOC(hashmap->allocator, (ptr), (size))
-#define FREE(mem) ALLOCATOR_FREE(hashmap->allocator, (mem))
-
 typedef struct hashmap_location_ {
     char *key;
     unsigned char data[0];
@@ -76,6 +71,8 @@ int hashmap_init_with_cap_and_allocator(hashmap_t *hashmap, size_t elem_size,
 
     return 0;
 }
+
+#define allocator hashmap->allocator
 
 void hashmap_destroy(hashmap_t *hashmap) {
     assert(hashmap != NULL);

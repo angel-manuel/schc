@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <inttypes.h>
 
+#include "data/allocator.h"
 #include "env.h"
 #include "util.h"
 
@@ -29,31 +30,31 @@ int core_print(const core_expr_t *expr, FILE *fp) {
     return res;
 }
 
-void core_destroy(core_expr_t *expr) {
+void core_destroy(core_expr_t *expr, allocator_t *allocator) {
     assert(expr != NULL);
 
     switch (expr->form) {
     case CORE_INDIR: {
         core_expr_t *target = expr->indir.target;
         // expr->indir.target = NULL;
-        core_destroy(target);
+        core_destroy(target, allocator);
         break;
     }
     case CORE_APPL: {
         core_appl_t *appl = &expr->appl;
 
-        core_destroy(appl->fn);
-        // free(appl->fn);
-        core_destroy(appl->arg);
-        // free(appl->arg);
+        core_destroy(appl->fn, allocator);
+        FREE(appl->fn);
+        core_destroy(appl->arg, allocator);
+        FREE(appl->arg);
 
         break;
     }
     case CORE_LAMBDA: {
         core_lambda_t *lambda = &expr->lambda;
 
-        core_destroy(lambda->body);
-        // free(lambda->body);
+        core_destroy(lambda->body, allocator);
+        FREE(lambda->body);
 
         env_destroy(&lambda->args);
 
@@ -62,12 +63,12 @@ void core_destroy(core_expr_t *expr) {
     case CORE_COND: {
         core_cond_t *cond = &expr->cond;
 
-        core_destroy(cond->cond);
-        // free(cond->cond);
-        core_destroy(cond->then_branch);
-        // free(cond->then_branch);
-        core_destroy(cond->else_branch);
-        // free(cond->else_branch);
+        core_destroy(cond->cond, allocator);
+        FREE(cond->cond);
+        core_destroy(cond->then_branch, allocator);
+        FREE(cond->then_branch);
+        core_destroy(cond->else_branch, allocator);
+        FREE(cond->else_branch);
 
         break;
     }
@@ -111,9 +112,12 @@ int core_print_indent(const core_expr_t *expr, FILE *fp, int indent,
     case CORE_NO_FORM:
         TRYNEG(res, fprintf(fp, "NO_FORM"));
         break;
-    case CORE_PLACEHOLDER:
-        TRYNEG(res, fprintf(fp, "PLACEHOLDER"));
+    case CORE_REF: {
+        const core_ref_t *ref = &expr->ref;
+
+        TRYNEG(res, fprintf(fp, "REF %i", ref->index));
         break;
+    }
     case CORE_CONSTRUCTOR:
         TRYNEG(res, fprintf(fp, "@%s", expr->constructor.name));
         break;
@@ -142,14 +146,28 @@ int core_print_indent(const core_expr_t *expr, FILE *fp, int indent,
     }
     case CORE_LAMBDA: {
         const core_lambda_t *lambda = &expr->lambda;
-        const char *typename = "TODO";
 
         // TRYCR(typename, type_to_str(lambda->type), NULL, -1);
 
         TRYNEG(res, fprintf(fp, "LAMBDA {\n"));
 
-        TRYNEG(res, fprintf(fp, "%*sarg = %s : %s\n", indent + FINDENT, "",
-                            "<arg>", typename));
+        vector_t /* const char * */ lambda_bound;
+        vector_init(&lambda_bound, sizeof(const char *));
+
+        env_list_scope(&lambda->args, &lambda_bound, 0);
+
+        TRYNEG(res, fprintf(fp, "%*sargs = ", indent + FINDENT, ""));
+
+        for (size_t i = 0; i < lambda_bound.len; ++i) {
+            const char *varname =
+                *(const char **)vector_get_ref(&lambda_bound, i);
+            TRYNEG(res, fprintf(fp, "%s%s", varname,
+                                i + 1 < lambda_bound.len ? ", " : ""));
+        }
+
+        TRYNEG(res, fprintf(fp, "\n"));
+
+        vector_destroy(&lambda_bound);
 
         TRYNEG(res, fprintf(fp, "%*sbody = ", indent + FINDENT, ""));
         TRY(res, core_print_indent(lambda->body, fp, indent + INDENT, seen));

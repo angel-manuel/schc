@@ -4,20 +4,20 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "type.h"
-
 #include "ast.h"
+#include "data/allocator.h"
+#include "type.h"
 
 typedef struct core_expr_ core_expr_t;
 
 #include "env.h"
 
 int core_print(const core_expr_t *expr, FILE *fp);
-void core_destroy(core_expr_t *expr);
+void core_destroy(core_expr_t *expr, allocator_t *allocator);
 
 typedef enum core_expr_form_ {
     CORE_NO_FORM = 0,
-    CORE_PLACEHOLDER,
+    CORE_REF,
     CORE_CONSTRUCTOR,
     CORE_INDIR,
     CORE_INTRINSIC,
@@ -66,6 +66,10 @@ typedef struct core_cond_ {
     core_expr_t *else_branch;
 } core_cond_t;
 
+typedef struct code_ref_ {
+    int index;
+} core_ref_t;
+
 struct core_expr_ {
     const char *name;
     core_expr_form_t form;
@@ -77,6 +81,7 @@ struct core_expr_ {
         core_lambda_t lambda;
         core_literal_t literal;
         core_cond_t cond;
+        core_ref_t ref;
     };
 };
 

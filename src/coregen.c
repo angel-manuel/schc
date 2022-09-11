@@ -6,8 +6,6 @@
 #include "data/vector.h"
 #include "util.h"
 
-#define ALLOC(x) ALLOCATOR_ALLOC(allocator, (x))
-
 #define CGFAIL(fmt, ...)                                                       \
     fprintf(stderr, "Coregen FAIL(%s:%d): " fmt "\n", __FILE__, __LINE__,      \
             ##__VA_ARGS__);
@@ -52,11 +50,6 @@ int coregen_populate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
     assert(allocator != NULL);
 
     int res;
-
-    core_expr_t empty_tmpl;
-
-    empty_tmpl.form = CORE_NO_FORM;
-    empty_tmpl.name = NULL;
 
     for (size_t i = 0; i < decls->len; ++i) {
         const ast_t *decl = (const ast_t *)vector_get_ref(decls, i);
@@ -153,7 +146,8 @@ int coregen_generate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
 
                 var_expr->name = varname;
                 // TRYCR(var_expr->name, stralloc(varname), NULL, -1);
-                var_expr->form = CORE_PLACEHOLDER;
+                var_expr->form = CORE_REF;
+                var_expr->ref.index = i;
 
                 TRY(res, env_put_expr(&lambda->args, varname, var_expr));
             }

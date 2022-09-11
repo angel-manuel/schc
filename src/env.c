@@ -46,7 +46,8 @@ core_expr_t *env_get_expr(env_t *env, const char *symbol) {
 
     if (expr == NULL) {
         if (env->upper_scope) {
-            return env_get_expr(env->upper_scope, symbol);
+            core_expr_t *ret = env_get_expr(env->upper_scope, symbol);
+            return ret;
         } else {
             return NULL;
         }

@@ -6,6 +6,7 @@
 
 #include <core.h>
 #include <coregen.h>
+#include <data/linalloc.h>
 #include <intrinsics/intrinsics.h>
 
 typedef size_t yy_size_t;
@@ -29,13 +30,14 @@ int main() {
     yy_scan_string(PROGRAM);
     parser_init(&parser);
 
-    allocator_t parser_allocator;
-    linalloc_t parser_linalloc;
-    linalloc_init(&parser_linalloc);
-    linalloc_allocator(&parser_linalloc, &parser_allocator);
+    allocator_t parser_allocator = default_allocator;
+    // linalloc_t parser_linalloc;
+    // linalloc_init(&parser_linalloc);
+    // linalloc_allocator(&parser_linalloc, &parser_allocator);
 
     ast_t ast;
     parser_parse(&parser, &ast, &parser_allocator);
+    parser_destroy(&parser);
 
     ast_print(&ast, stdout);
 
@@ -50,12 +52,10 @@ int main() {
     env_init_with_allocator(&env, &core_allocator);
     env_init_with_allocator(&intrinsics_env, &core_allocator);
 
-    intrinsics_load(&intrinsics_env, &linalloc);
+    intrinsics_load(&intrinsics_env, &core_allocator);
     env.upper_scope = &intrinsics_env;
 
     coregen_from_module_ast(&ast, &env, &core_allocator);
-
-    parser_destroy(&parser);
 
     vector_t /* const char * */ module_scope;
     vector_init(&module_scope, sizeof(const char *));
@@ -71,10 +71,10 @@ int main() {
         core_print(expr, stdout);
     }
 
-    // env_destroy(&env);
-    // ast_destroy(&ast);
+    env_destroy(&env);
+    ast_destroy(&ast, &parser_allocator);
     vector_destroy(&module_scope);
-    linalloc_destroy(&parser_linalloc);
+    // linalloc_destroy(&parser_linalloc);
     linalloc_destroy(&linalloc);
 
     return 0;

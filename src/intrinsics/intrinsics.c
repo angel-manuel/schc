@@ -2,15 +2,13 @@
 
 #include <assert.h>
 
-#include "../data/linalloc.h"
+#include "../data/allocator.h"
 #include "../env.h"
 #include "../util.h"
 
-#define ALLOC(x) linalloc_alloc(linalloc, (x))
-
-int intrinsics_load(env_t *env, linalloc_t *linalloc) {
+int intrinsics_load(env_t *env, allocator_t *allocator) {
     assert(env != NULL);
-    assert(linalloc != NULL);
+    assert(allocator != NULL);
 
     int res;
 

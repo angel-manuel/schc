@@ -15,7 +15,7 @@ void ast_print(const ast_t *node, FILE *fp) {
     fprintf(fp, "\n");
 }
 
-void ast_destroy(ast_t *node) {
+void ast_destroy(ast_t *node, allocator_t *allocator) {
     assert(node != NULL);
 
     switch (node->rule) {
@@ -25,24 +25,24 @@ void ast_destroy(ast_t *node) {
         ast_module_t *module = &node->module;
 
         if (module->modid != NULL) {
-            // free(module->modid);
+            FREE(module->modid);
         }
 
         for (int i = 0; i < module->exports.len; ++i) {
-            // const ast_export_t *export = vector_get_ref(&module->exports, i);
-            // free(export->exportid);
+            const ast_export_t *export = vector_get_ref(&module->exports, i);
+            FREE(export->exportid);
         }
         vector_destroy(&module->exports);
 
-        ast_destroy(module->body);
-        // free(module->body);
+        ast_destroy(module->body, allocator);
+        FREE(module->body);
         break;
     }
     case AST_BODY: {
         ast_body_t *body = &node->body;
 
         for (int i = 0; i < body->topdecls.len; ++i) {
-            ast_destroy((ast_t *)vector_get_ref(&body->topdecls, i));
+            ast_destroy((ast_t *)vector_get_ref(&body->topdecls, i), allocator);
         }
         vector_destroy(&body->topdecls);
         break;
@@ -50,37 +50,37 @@ void ast_destroy(ast_t *node) {
     case AST_NEG: {
         ast_neg_t *neg = &node->neg;
 
-        ast_destroy(neg->expr);
+        ast_destroy(neg->expr, allocator);
         break;
     }
     case AST_FN_APPL: {
         ast_fn_appl_t *fn_appl = &node->fn_appl;
 
-        ast_destroy(fn_appl->arg);
-        // free(fn_appl->arg);
-        ast_destroy(fn_appl->fn);
-        // free(fn_appl->fn);
+        ast_destroy(fn_appl->arg, allocator);
+        FREE(fn_appl->arg);
+        ast_destroy(fn_appl->fn, allocator);
+        FREE(fn_appl->fn);
         break;
     }
     case AST_OP_APPL: {
         ast_op_appl_t *op_appl = &node->op_appl;
 
-        // free(op_appl->op_name);
-        ast_destroy(op_appl->lhs);
-        // free(op_appl->lhs);
-        ast_destroy(op_appl->rhs);
-        // free(op_appl->rhs);
+        FREE(op_appl->op_name);
+        ast_destroy(op_appl->lhs, allocator);
+        FREE(op_appl->lhs);
+        ast_destroy(op_appl->rhs, allocator);
+        FREE(op_appl->rhs);
         break;
     }
     case AST_IF: {
         ast_if_t *if_exp = &node->if_exp;
 
-        ast_destroy(if_exp->else_branch);
-        // free(if_exp->else_branch);
-        ast_destroy(if_exp->then_branch);
-        // free(if_exp->then_branch);
-        ast_destroy(if_exp->cond);
-        // free(if_exp->cond);
+        ast_destroy(if_exp->else_branch, allocator);
+        FREE(if_exp->else_branch);
+        ast_destroy(if_exp->then_branch, allocator);
+        FREE(if_exp->then_branch);
+        ast_destroy(if_exp->cond, allocator);
+        FREE(if_exp->cond);
 
         break;
     }
@@ -88,7 +88,7 @@ void ast_destroy(ast_t *node) {
         ast_do_t *do_exp = &node->do_exp;
 
         for (int i = 0; i < do_exp->steps.len; ++i) {
-            ast_destroy((ast_t *)vector_get_ref(&do_exp->steps, i));
+            ast_destroy((ast_t *)vector_get_ref(&do_exp->steps, i), allocator);
         }
         vector_destroy(&do_exp->steps);
 
@@ -98,28 +98,28 @@ void ast_destroy(ast_t *node) {
         ast_let_t *let = &node->let;
 
         if (let->body != NULL) {
-            ast_destroy(let->body);
-            // free(let->body);
+            ast_destroy(let->body, allocator);
+            FREE(let->body);
         }
 
         for (int i = 0; i < let->bindings.len; ++i) {
-            ast_destroy((ast_t *)vector_get_ref(&let->bindings, i));
+            ast_destroy((ast_t *)vector_get_ref(&let->bindings, i), allocator);
         }
         vector_destroy(&let->bindings);
 
         break;
     }
     case AST_VAR: {
-        // ast_var_t *var = &node->var;
+        ast_var_t *var = &node->var;
 
-        // free(var->name);
+        FREE(var->name);
 
         break;
     }
     case AST_CON: {
-        // ast_con_t *con = &node->con;
+        ast_con_t *con = &node->con;
 
-        // free(con->name);
+        FREE(con->name);
 
         break;
     }
@@ -127,49 +127,49 @@ void ast_destroy(ast_t *node) {
         ast_lit_t *lit = &node->lit;
 
         if (lit->lit_type == AST_LIT_TYPE_STR) {
-            // free(lit->str_lit);
+            FREE(lit->str_lit);
         }
         break;
     }
     case AST_FIXITY_DECL: {
-        // ast_fixity_decl_t *fixity_decl = &node->fixity_decl;
+        ast_fixity_decl_t *fixity_decl = &node->fixity_decl;
 
-        // free(fixity_decl->op);
+        FREE(fixity_decl->op);
 
         break;
     }
     case AST_FN_DECL: {
         ast_fn_decl_t *fn_decl = &node->fn_decl;
 
-        ast_destroy(fn_decl->body);
-        // free(fn_decl->body);
+        ast_destroy(fn_decl->body, allocator);
+        FREE(fn_decl->body);
 
         for (int i = 0; i < fn_decl->vars.len; ++i) {
-            // free(*(char **)vector_get_ref(&fn_decl->vars, i));
+            FREE(*(char **)vector_get_ref(&fn_decl->vars, i));
         }
         vector_destroy(&fn_decl->vars);
 
-        // free(fn_decl->name);
+        FREE(fn_decl->name);
 
         break;
     }
     case AST_VAL_DECL: {
         ast_val_decl_t *val_decl = &node->val_decl;
 
-        ast_destroy(val_decl->body);
-        // free(val_decl->body);
+        ast_destroy(val_decl->body, allocator);
+        FREE(val_decl->body);
 
-        // free(val_decl->name);
+        FREE(val_decl->name);
 
         break;
     }
     case AST_HAS_TYPE_DECL: {
         ast_has_type_decl_t *has_type_decl = &node->has_type_decl;
 
-        ast_destroy(has_type_decl->type_exp);
-        // free(has_type_decl->type_exp);
+        ast_destroy(has_type_decl->type_exp, allocator);
+        FREE(has_type_decl->type_exp);
 
-        // free(has_type_decl->symbol_name);
+        FREE(has_type_decl->symbol_name);
 
         break;
     }

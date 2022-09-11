@@ -1,6 +1,7 @@
 #ifndef SCHC_AST_H_
 #define SCHC_AST_H_
 
+#include "data/allocator.h"
 #include "data/vector.h"
 
 #include <stdio.h>
@@ -41,7 +42,7 @@ struct ast_;
 typedef struct ast_ ast_t;
 
 void ast_print(const ast_t *node, FILE *fp);
-void ast_destroy(ast_t *node);
+void ast_destroy(ast_t *node, allocator_t *allocator);
 
 typedef struct ast_module_ {
     char *modid;

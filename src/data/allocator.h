@@ -28,4 +28,9 @@ extern allocator_t default_allocator;
 #define ALLOCATOR_FREE(allocator, mem)                                         \
     ((allocator)->free)((allocator)->allocator_data, (mem))
 
+#define ALLOC(size) ALLOCATOR_ALLOC(allocator, (size))
+#define STRALLOC(str) ALLOCATOR_STRALLOC(allocator, (str))
+#define REALLOC(ptr, size) ALLOCATOR_REALLOC(allocator, (ptr), (size))
+#define FREE(mem) ALLOCATOR_FREE(allocator, (mem))
+
 #endif /*SCHC_ALLOCATOR_H_*/

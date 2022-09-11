@@ -6,9 +6,9 @@
 
 #define VECTOR_DEFAULT_INITIAL_CAP 4
 
-#define ALLOC(size) ALLOCATOR_ALLOC(vector->allocator, (size))
-#define REALLOC(ptr, size) ALLOCATOR_REALLOC(vector->allocator, (ptr), (size))
-#define FREE(mem) ALLOCATOR_FREE(vector->allocator, (mem))
+#define VALLOC(size) ALLOCATOR_ALLOC(vector->allocator, (size))
+#define VREALLOC(ptr, size) ALLOCATOR_REALLOC(vector->allocator, (ptr), (size))
+#define VFREE(mem) ALLOCATOR_FREE(vector->allocator, (mem))
 
 int vector_init(vector_t *vector, size_t elem_size) {
     return vector_init_with_cap(vector, elem_size, VECTOR_DEFAULT_INITIAL_CAP);
@@ -42,7 +42,7 @@ int vector_init_with_cap_and_allocator(vector_t *vector, size_t elem_size,
     vector->elem_size = elem_size;
     vector->len = 0;
     vector->cap = initial_capacity;
-    vector->mem = ALLOC(elem_size * initial_capacity);
+    vector->mem = VALLOC(elem_size * initial_capacity);
     if (vector->mem == NULL) {
         return -1;
     }
@@ -54,7 +54,7 @@ void vector_destroy(vector_t *vector) {
     assert(vector != NULL);
     assert(vector->mem != NULL);
 
-    FREE(vector->mem);
+    VFREE(vector->mem);
 }
 
 void *vector_get_mem(vector_t *vector) {
@@ -114,7 +114,7 @@ int vector_grow(vector_t *vector) {
         vector->cap *= 2;
     }
 
-    void *new_mem = REALLOC(vector->mem, vector->elem_size * vector->cap);
+    void *new_mem = VREALLOC(vector->mem, vector->elem_size * vector->cap);
     if (new_mem == NULL) {
         return -1;
     }

@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     env_init_with_allocator(&env, &core_allocator);
     env_init_with_allocator(&intrinsics_env, &core_allocator);
 
-    intrinsics_load(&intrinsics_env, &linalloc);
+    intrinsics_load(&intrinsics_env, &core_allocator);
     env.upper_scope = &intrinsics_env;
 
     if (coregen_from_module_ast(&ast, &env, &core_allocator) == -1) {

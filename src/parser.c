@@ -1,3 +1,5 @@
+#define MY_OBJECT parser->
+
 #include "parser.h"
 
 #include <assert.h>
@@ -8,8 +10,10 @@
 #include "lexer.h"
 #include "util.h"
 
-#define ALLOC(x) ALLOCATOR_ALLOC(parser->allocator, (x))
-#define STRALLOC(x) ALLOCATOR_STRALLOC(parser->allocator, (x))
+#define PALLOC(size) ALLOCATOR_ALLOC(parser->allocator, (size))
+#define PSTRALLOC(str) ALLOCATOR_STRALLOC(parser->allocator, (str))
+#define PREALLOC(ptr, size) ALLOCATOR_REALLOC(parser->allocator, (ptr), (size))
+#define PFREE(mem) ALLOCATOR_FREE(parser->allocator, (mem))
 
 #define PFAIL(fail)                                                            \
     fprintf(stderr, "Parser FAIL(%s:%d): %s\n", __FILE__, __LINE__, fail);
@@ -84,10 +88,6 @@ int parser_init(parser_t *parser) {
 void parser_destroy(parser_t *parser) {
     assert(parser != NULL);
 
-    if (parser->ptext != NULL) {
-        // free(parser->ptext);
-    }
-
     stack_destroy(&parser->indent_stack);
 }
 
@@ -98,9 +98,13 @@ int parser_parse(parser_t *parser, ast_t *root, allocator_t *allocator) {
 
     parser->allocator = allocator;
     parser->token = yylex();
-    TRYCR(parser->ptext, STRALLOC(yytext), NULL, -1);
+    TRYCR(parser->ptext, PSTRALLOC(yytext), NULL, -1);
 
     int res = module(parser, root);
+
+    if (parser->ptext != NULL) {
+        PFREE(parser->ptext);
+    }
 
     parser->allocator = NULL;
 
@@ -149,12 +153,12 @@ int accept(parser_t *parser, token_t token) {
         }
 
         if (parser->ptext != NULL) {
-            // free(parser->ptext);
+            PFREE(parser->ptext);
             parser->ptext = NULL;
         }
 
         printf("%-20s%s\n", strtoken(token), yytext);
-        TRYCR(parser->ptext, STRALLOC(yytext), NULL, -1);
+        TRYCR(parser->ptext, PSTRALLOC(yytext), NULL, -1);
         parser->token = yylex();
 
         return token;
@@ -316,7 +320,7 @@ int module(parser_t *parser, ast_t *node) {
         TRYP(res, accept(parser, TOK_WHERE));
     }
 
-    TRYCR(module->body, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+    TRYCR(module->body, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
     TRYP(res, body(parser, module->body));
 
     node->rule = AST_MODULE;
@@ -407,20 +411,22 @@ int function(parser_t *parser, char *decl_name, ast_t *node) {
                                         parser->allocator));
 
     do {
+        void *resp;
+
         char *var_name = parser_get_text(parser);
-        vector_push_back(&fn_decl->vars, &var_name);
+        TRYCR(resp, vector_push_back(&fn_decl->vars, &var_name), NULL, -1);
         TRY(res, maybe(soft(accept(parser, TOK_VARID))));
     } while (res != TOK_NO_TOK);
 
     TRYP(res, accept(parser, '='));
 
-    TRYCR(fn_decl->body, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+    TRYCR(fn_decl->body, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
     TRYP(res, expression(parser, fn_decl->body));
 
     TRYP(res, maybe(soft(accept(parser, TOK_WHERE))));
     if (res != TOK_NO_TOK) {
         ast_t *body;
-        TRYCR(body, (ast_t *)ALLOC(sizeof(ast_t)), 0, -1);
+        TRYCR(body, (ast_t *)PALLOC(sizeof(ast_t)), 0, -1);
         memcpy(body, fn_decl->body, sizeof(ast_t));
 
         ast_let_t *let = &fn_decl->body->let;
@@ -450,7 +456,7 @@ int value(parser_t *parser, char *decl_name, ast_t *node) {
 
     val_decl->name = decl_name;
 
-    TRYCR(val_decl->body, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+    TRYCR(val_decl->body, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
     TRYP(res, expression(parser, val_decl->body));
 
     TRYP(res, maybe(soft(accept(parser, TOK_WHERE))));
@@ -458,7 +464,7 @@ int value(parser_t *parser, char *decl_name, ast_t *node) {
         open_indent(parser);
 
         ast_t *body;
-        TRYCR(body, (ast_t *)ALLOC(sizeof(ast_t)), 0, -1);
+        TRYCR(body, (ast_t *)PALLOC(sizeof(ast_t)), 0, -1);
         memcpy(body, val_decl->body, sizeof(ast_t));
 
         ast_let_t *let = &val_decl->body->let;
@@ -490,7 +496,7 @@ int has_type(parser_t *parser, char *decl_name, ast_t *node) {
 
     has_type_decl->symbol_name = decl_name;
 
-    TRYCR(has_type_decl->type_exp, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+    TRYCR(has_type_decl->type_exp, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
     TRYP(res, expression(parser, has_type_decl->type_exp));
 
     node->rule = AST_HAS_TYPE_DECL;
@@ -521,14 +527,14 @@ int expression(parser_t *parser, ast_t *node) {
     if (tmp != TOK_NO_TOK) {
         res = tmp;
         ast_t *lhs;
-        TRYCR(lhs, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+        TRYCR(lhs, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
         memcpy(lhs, node, sizeof(ast_t));
 
         ast_op_appl_t *op_appl = &node->op_appl;
 
         op_appl->op_name = parser_get_text(parser);
         op_appl->lhs = lhs;
-        TRYCR(op_appl->rhs, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+        TRYCR(op_appl->rhs, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
         TRYP(res, expression(parser, op_appl->rhs));
 
         node->rule = AST_OP_APPL;
@@ -554,7 +560,7 @@ int let_exp(parser_t *parser, ast_t *node) {
 
     TRYP(res, accept(parser, TOK_IN));
 
-    TRYCR(let_expr->body, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+    TRYCR(let_expr->body, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
 
     TRYP(res, expression(parser, let_expr->body));
 
@@ -573,17 +579,17 @@ int if_exp(parser_t *parser, ast_t *node) {
 
     ast_if_t *if_expr = &node->if_exp;
 
-    TRYCR(if_expr->cond, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+    TRYCR(if_expr->cond, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
     TRYP(res, expression(parser, if_expr->cond));
 
     TRYP(res, accept(parser, TOK_THEN));
 
-    TRYCR(if_expr->then_branch, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+    TRYCR(if_expr->then_branch, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
     TRYP(res, expression(parser, if_expr->then_branch));
 
     TRYP(res, accept(parser, TOK_ELSE));
 
-    TRYCR(if_expr->else_branch, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+    TRYCR(if_expr->else_branch, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
     TRYP(res, expression(parser, if_expr->else_branch));
 
     node->rule = AST_IF;
@@ -651,7 +657,7 @@ int unary_neg(parser_t *parser, ast_t *node) {
 
     ast_neg_t *neg = &node->neg;
 
-    TRYCR(neg->expr, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+    TRYCR(neg->expr, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
     TRYP(res, expression(parser, neg->expr));
 
     node->rule = AST_NEG;
@@ -667,12 +673,12 @@ int fexpression(parser_t *parser, ast_t *node) {
     TRYP(res, soft(aexpression(parser, node)));
 
     ast_t *rhs;
-    TRYCR(rhs, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+    TRYCR(rhs, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
 
     TRYP(res, maybe(aexpression(parser, rhs)));
     while (res != TOK_NO_TOK) {
         ast_t *lhs;
-        TRYCR(lhs, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+        TRYCR(lhs, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
         memcpy(lhs, node, sizeof(ast_t));
 
         ast_fn_appl_t *fn_appl = &node->fn_appl;
@@ -680,12 +686,12 @@ int fexpression(parser_t *parser, ast_t *node) {
         fn_appl->arg = rhs;
 
         node->rule = AST_FN_APPL;
-        TRYCR(rhs, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+        TRYCR(rhs, (ast_t *)PALLOC(sizeof(ast_t)), NULL, -1);
 
         TRYP(res, maybe(aexpression(parser, rhs)));
     }
 
-    // free(rhs);
+    PFREE(rhs);
 
     return res;
 }
@@ -734,7 +740,7 @@ int con(parser_t *parser, ast_t *node) {
     TRYP(res, maybe(soft(accept(parser, TOK_UNIT))));
 
     if (res != TOK_NO_TOK) {
-        node->con.name = STRALLOC("()");
+        node->con.name = PSTRALLOC("()");
         node->rule = AST_CON;
         return res;
     }
@@ -767,7 +773,7 @@ int number(parser_t *parser, ast_t *node) {
     lit->lit_type = AST_LIT_TYPE_INT;
     lit->int_lit = atoi(number_str);
 
-    // free(number_str);
+    PFREE(number_str);
 
     node->rule = AST_LIT;
     return res;
