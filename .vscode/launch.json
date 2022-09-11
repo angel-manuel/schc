@@ -10,7 +10,27 @@
             "request": "launch",
             "program": "${workspaceFolder}/schc",
             "args": [
-                "test/Test.hs"
+                "inputs/Test.hs"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [],
+            "externalConsole": true,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) Core Test",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/test-core",
+            "args": [
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

@@ -3,4 +3,4 @@ build/
 # Executables
 schc
 *-test
-
+test-*

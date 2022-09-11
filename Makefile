@@ -3,7 +3,7 @@ CFLAGS = -Wall -Werror -Wfatal-errors -std=c99 -Isrc
 CFLAGS_FLEX = -std=c99 -D_POSIX_SOURCE
 SOURCES = $(filter-out src/schc.c, $(wildcard src/*.c src/**/*.c))
 OBJECTS = $(patsubst src/%.c, build/%.o, $(SOURCES)) build/gen_lexer.o
-TESTS = $(patsubst tests/%.c, %-test, $(wildcard tests/*.c))
+TESTS = $(patsubst tests/test-%.c, test-%, $(wildcard tests/test-*.c))
 
 .PHONY: all
 all: debug
@@ -26,7 +26,7 @@ tests: dirs $(TESTS)
 schc: $(OBJECTS) build/schc.o
 	$(CC) $^ -o $@
 
-%-test: $(OBJECTS) build/%-test.o
+test-%: $(OBJECTS) build/test-%.o
 	$(CC) $^ -o $@
 
 .PHONY: dirs
@@ -43,7 +43,7 @@ build/gen_lexer.c: src/gen_lexer.l
 build/gen_lexer.o: build/gen_lexer.c
 	$(CC) $(CFLAGS_FLEX) -o $@ -c $<
 
-build/%-test.o: tests/%.c src/test.h
+build/test-%.o: tests/test-%.c src/test.h
 	$(CC) $(CFLAGS) -o $@ -c $<
 
 build/%/:
