@@ -9,6 +9,8 @@
 #define INDENT 2
 #define FINDENT 2
 
+#define FREE(x) ALLOCATOR_FREE(allocator, (x))
+
 int core_print_indent(const core_expr_t *expr, FILE *fp, int indent,
                       vector_t /* core_expr_t* */ *seen);
 
@@ -29,32 +31,29 @@ int core_print(const core_expr_t *expr, FILE *fp) {
     return res;
 }
 
-void core_destroy(core_expr_t *expr) {
+void core_destroy(core_expr_t *expr, allocator_t *allocator) {
     assert(expr != NULL);
 
     switch (expr->form) {
-    case CORE_INDIR: {
-        core_expr_t *target = expr->indir.target;
-        // expr->indir.target = NULL;
-        core_destroy(target);
-        break;
-    }
+    case CORE_INDIR:
+        break; // Dont follow indirs, we dont own them
     case CORE_APPL: {
         core_appl_t *appl = &expr->appl;
 
-        core_destroy(appl->fn);
-        // free(appl->fn);
-        core_destroy(appl->arg);
-        // free(appl->arg);
+        core_destroy(appl->fn, allocator);
+        FREE(appl->fn);
+        core_destroy(appl->arg, allocator);
+        FREE(appl->arg);
 
         break;
     }
     case CORE_LAMBDA: {
         core_lambda_t *lambda = &expr->lambda;
 
-        core_destroy(lambda->body);
-        // free(lambda->body);
+        core_destroy(lambda->body, allocator);
+        FREE(lambda->body);
 
+        lambda->args.upper_scope = NULL; // Don't destroy the upper scope
         env_destroy(&lambda->args);
 
         break;
@@ -62,12 +61,12 @@ void core_destroy(core_expr_t *expr) {
     case CORE_COND: {
         core_cond_t *cond = &expr->cond;
 
-        core_destroy(cond->cond);
-        // free(cond->cond);
-        core_destroy(cond->then_branch);
-        // free(cond->then_branch);
-        core_destroy(cond->else_branch);
-        // free(cond->else_branch);
+        core_destroy(cond->cond, allocator);
+        FREE(cond->cond);
+        core_destroy(cond->then_branch, allocator);
+        FREE(cond->then_branch);
+        core_destroy(cond->else_branch, allocator);
+        FREE(cond->else_branch);
 
         break;
     }

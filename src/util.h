@@ -3,23 +3,23 @@
 
 #include <signal.h>
 
-#ifdef DEBUG
-#define DEBUG_PRINTF(...)                                                      \
-    do {                                                                       \
-        fprintf(stderr, __VA_ARGS__);                                          \
-    } while (0)
-#define DEBUG_PRINTS(val)                                                      \
-    do {                                                                       \
-        fprintf(stderr; #val " = %s\n", val)                                   \
-    } while (0)
-#else
+#ifdef NDEBUG
 #define DEBUG_PRINTF(...)                                                      \
     do {                                                                       \
     } while (0)
 #define DEBUG_PRINTS(...)                                                      \
     do {                                                                       \
     } while (0)
-#endif /*DEBUG*/
+#else
+#define DEBUG_PRINTF(M, ...)                                                   \
+    do {                                                                       \
+        fprintf(stderr, "DEBUG %s: %d: " M "\n", __FILE__, __LINE__, ##__VA_ARGS__);    \
+    } while (0)
+#define DEBUG_PRINTS(val)                                                      \
+    do {                                                                       \
+        fprintf(stderr; #val " = %s\n", val)                                   \
+    } while (0)
+#endif /*NDEBUG*/
 
 #define TRYCR(var, exp, cond, ret)                                             \
     do {                                                                       \

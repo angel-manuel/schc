@@ -10,6 +10,7 @@
 
 #define ALLOC(x) ALLOCATOR_ALLOC(parser->allocator, (x))
 #define STRALLOC(x) ALLOCATOR_STRALLOC(parser->allocator, (x))
+#define FREE(x) ALLOCATOR_FREE(parser->allocator, (x))
 
 #define PFAIL(fail)                                                            \
     fprintf(stderr, "Parser FAIL(%s:%d): %s\n", __FILE__, __LINE__, fail);
@@ -85,7 +86,7 @@ void parser_destroy(parser_t *parser) {
     assert(parser != NULL);
 
     if (parser->ptext != NULL) {
-        // free(parser->ptext);
+        FREE(parser->ptext);
     }
 
     stack_destroy(&parser->indent_stack);
@@ -149,7 +150,7 @@ int accept(parser_t *parser, token_t token) {
         }
 
         if (parser->ptext != NULL) {
-            // free(parser->ptext);
+            FREE(parser->ptext);
             parser->ptext = NULL;
         }
 
@@ -685,7 +686,7 @@ int fexpression(parser_t *parser, ast_t *node) {
         TRYP(res, maybe(aexpression(parser, rhs)));
     }
 
-    // free(rhs);
+    FREE(rhs);
 
     return res;
 }
@@ -767,7 +768,7 @@ int number(parser_t *parser, ast_t *node) {
     lit->lit_type = AST_LIT_TYPE_INT;
     lit->int_lit = atoi(number_str);
 
-    // free(number_str);
+    FREE(number_str);
 
     node->rule = AST_LIT;
     return res;

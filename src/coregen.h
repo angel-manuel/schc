@@ -8,7 +8,6 @@
 #include "data/allocator.h"
 #include "data/hashmap.h"
 
-int coregen_from_module_ast(const ast_t *ast, env_t *env,
-                            allocator_t *allocator);
+int coregen_from_module_ast(const ast_t *ast, env_t *env);
 
 #endif /*SCHC_COREGEN_H_*/

@@ -6,7 +6,7 @@
 #include "data/vector.h"
 #include "util.h"
 
-#define ALLOC(x) ALLOCATOR_ALLOC(allocator, (x))
+#define ALLOC(x) ALLOCATOR_ALLOC(env->allocator, (x))
 
 #define CGFAIL(fmt, ...)                                                       \
     fprintf(stderr, "Coregen FAIL(%s:%d): " fmt "\n", __FILE__, __LINE__,      \
@@ -15,18 +15,13 @@
     fprintf(stderr, "Coregen WARN(%s:%d): " fmt "\n", __FILE__, __LINE__,      \
             ##__VA_ARGS__);
 
-int coregen_populate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
-                         allocator_t *allocator);
-int coregen_generate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
-                         allocator_t *allocator);
-int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
-                     allocator_t *allocator);
+int coregen_populate_env(const vector_t /* core_ast_t */ *decls, env_t *env);
+int coregen_generate_env(const vector_t /* core_ast_t */ *decls, env_t *env);
+int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr);
 
-int coregen_from_module_ast(const ast_t *ast, env_t *env,
-                            allocator_t *allocator) {
+int coregen_from_module_ast(const ast_t *ast, env_t *env) {
     assert(ast != NULL);
     assert(env != NULL);
-    assert(allocator != NULL);
 
     int res;
 
@@ -35,8 +30,8 @@ int coregen_from_module_ast(const ast_t *ast, env_t *env,
 
         const vector_t *decls = &ast->module.body->body.topdecls;
 
-        TRY(res, coregen_populate_env(decls, env, allocator));
-        TRY(res, coregen_generate_env(decls, env, allocator));
+        TRY(res, coregen_populate_env(decls, env));
+        TRY(res, coregen_generate_env(decls, env));
     } else {
         CGFAIL("Not a module");
         return -1;
@@ -45,18 +40,11 @@ int coregen_from_module_ast(const ast_t *ast, env_t *env,
     return 0;
 }
 
-int coregen_populate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
-                         allocator_t *allocator) {
+int coregen_populate_env(const vector_t /* core_ast_t */ *decls, env_t *env) {
     assert(decls != NULL);
     assert(env != NULL);
-    assert(allocator != NULL);
 
     int res;
-
-    core_expr_t empty_tmpl;
-
-    empty_tmpl.form = CORE_NO_FORM;
-    empty_tmpl.name = NULL;
 
     for (size_t i = 0; i < decls->len; ++i) {
         const ast_t *decl = (const ast_t *)vector_get_ref(decls, i);
@@ -65,24 +53,22 @@ int coregen_populate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
         case AST_VAL_DECL: {
             const ast_val_decl_t *val_decl = &decl->val_decl;
 
-            core_expr_t *new_expr;
-            TRYCR(new_expr, ALLOC(sizeof(core_expr_t)), NULL, -1);
+            core_expr_t new_expr;
 
-            new_expr->name = val_decl->name;
+            new_expr.name = val_decl->name;
 
-            TRY(res, env_put_expr(env, val_decl->name, new_expr));
+            TRY(res, env_put_expr(env, val_decl->name, &new_expr));
 
             break;
         }
         case AST_FN_DECL: {
             const ast_fn_decl_t *fn_decl = &decl->fn_decl;
 
-            core_expr_t *new_expr;
-            TRYCR(new_expr, ALLOC(sizeof(core_expr_t)), NULL, -1);
+            core_expr_t new_expr;
 
-            new_expr->name = fn_decl->name;
+            new_expr.name = fn_decl->name;
 
-            TRY(res, env_put_expr(env, fn_decl->name, new_expr));
+            TRY(res, env_put_expr(env, fn_decl->name, &new_expr));
 
             break;
         }
@@ -108,11 +94,9 @@ int coregen_populate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
     return 0;
 }
 
-int coregen_generate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
-                         allocator_t *allocator) {
+int coregen_generate_env(const vector_t /* core_ast_t */ *decls, env_t *env) {
     assert(decls != NULL);
     assert(env != NULL);
-    assert(allocator != NULL);
 
     int res;
 
@@ -126,7 +110,7 @@ int coregen_generate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
 
             TRYCR(expr, env_get_expr(env, val_decl->name), NULL, -1);
 
-            TRY(res, coregen_from_ast(val_decl->body, env, expr, allocator));
+            TRY(res, coregen_from_ast(val_decl->body, env, expr));
 
             break;
         }
@@ -141,27 +125,26 @@ int coregen_generate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
             // TRYCR(expr->name, stralloc(fn_decl->name), NULL, -1);
             core_lambda_t *lambda = &expr->lambda;
 
-            TRY(res, env_init_with_allocator(&lambda->args, allocator));
+            TRY(res, env_init_with_allocator(&lambda->args, env->allocator));
             lambda->args.upper_scope = env;
 
             for (size_t i = 0; i < fn_decl->vars.len; ++i) {
                 const char *varname =
                     *(const char **)vector_get_ref(&fn_decl->vars, i);
 
-                core_expr_t *var_expr;
-                TRYCR(var_expr, ALLOC(sizeof(core_expr_t)), NULL, -1);
+                core_expr_t var_expr;
 
-                var_expr->name = varname;
-                // TRYCR(var_expr->name, stralloc(varname), NULL, -1);
-                var_expr->form = CORE_PLACEHOLDER;
+                var_expr.name = varname;
+                // TRYCR(var_expr.name, stralloc(varname), NULL, -1);
+                var_expr.form = CORE_PLACEHOLDER;
 
-                TRY(res, env_put_expr(&lambda->args, varname, var_expr));
+                TRY(res, env_put_expr(&lambda->args, varname, &var_expr));
             }
 
             TRYCR(lambda->body, ALLOC(sizeof(core_expr_t)), NULL, -1);
 
             TRY(res, coregen_from_ast(fn_decl->body, &lambda->args,
-                                      lambda->body, allocator));
+                                      lambda->body));
 
             break;
         }
@@ -187,12 +170,10 @@ int coregen_generate_env(const vector_t /* core_ast_t */ *decls, env_t *env,
     return 0;
 }
 
-int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
-                     allocator_t *allocator) {
+int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr) {
     assert(ast != NULL);
     assert(env != NULL);
     assert(expr != NULL);
-    assert(allocator != NULL);
 
     int res;
 
@@ -224,7 +205,7 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
 
         TRYCR(appl->arg, ALLOC(sizeof(core_expr_t)), NULL, -1);
         appl->arg->name = NULL;
-        TRY(res, coregen_from_ast(neg_ast->expr, env, appl->arg, allocator));
+        TRY(res, coregen_from_ast(neg_ast->expr, env, appl->arg));
 
         break;
     }
@@ -236,11 +217,11 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
 
         TRYCR(appl->fn, ALLOC(sizeof(core_expr_t)), NULL, -1);
         appl->fn->name = NULL;
-        TRY(res, coregen_from_ast(fn_appl_ast->fn, env, appl->fn, allocator));
+        TRY(res, coregen_from_ast(fn_appl_ast->fn, env, appl->fn));
 
         TRYCR(appl->arg, ALLOC(sizeof(core_expr_t)), NULL, -1);
         appl->arg->name = NULL;
-        TRY(res, coregen_from_ast(fn_appl_ast->arg, env, appl->arg, allocator));
+        TRY(res, coregen_from_ast(fn_appl_ast->arg, env, appl->arg));
 
         break;
     }
@@ -265,15 +246,19 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
         appl->fn->name = NULL;
         appl->fn->form = CORE_APPL;
         core_appl_t *lhs_appl = &appl->fn->appl;
-        lhs_appl->fn = op_expr;
+
+        TRYCR(lhs_appl->fn, ALLOC(sizeof(core_expr_t)), NULL, -1);
+        lhs_appl->fn->name = NULL;
+        lhs_appl->fn->form = CORE_INDIR;
+        lhs_appl->fn->indir.target = op_expr;
+
         TRYCR(lhs_appl->arg, ALLOC(sizeof(core_expr_t)), NULL, -1);
         lhs_appl->arg->name = NULL;
-        TRY(res,
-            coregen_from_ast(op_appl_ast->lhs, env, lhs_appl->arg, allocator));
+        TRY(res, coregen_from_ast(op_appl_ast->lhs, env, lhs_appl->arg));
 
         TRYCR(appl->arg, ALLOC(sizeof(core_expr_t)), NULL, -1);
         appl->arg->name = NULL;
-        TRY(res, coregen_from_ast(op_appl_ast->rhs, env, appl->arg, allocator));
+        TRY(res, coregen_from_ast(op_appl_ast->rhs, env, appl->arg));
 
         break;
     }
@@ -282,13 +267,13 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
 
         env_t *let_env;
         TRYCR(let_env, malloc(sizeof(env_t)), NULL, -1);
-        TRY(res, env_init_with_allocator(let_env, allocator));
+        TRY(res, env_init_with_allocator(let_env, env->allocator));
         let_env->upper_scope = env;
 
-        TRY(res, coregen_populate_env(&let_ast->bindings, let_env, allocator));
-        TRY(res, coregen_generate_env(&let_ast->bindings, let_env, allocator));
+        TRY(res, coregen_populate_env(&let_ast->bindings, let_env));
+        TRY(res, coregen_generate_env(&let_ast->bindings, let_env));
 
-        TRY(res, coregen_from_ast(let_ast->body, let_env, expr, allocator));
+        TRY(res, coregen_from_ast(let_ast->body, let_env, expr));
 
         let_env->upper_scope = NULL;
         env_destroy(let_env);
@@ -340,11 +325,9 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr,
         TRYCR(cond->then_branch, ALLOC(sizeof(core_expr_t)), NULL, -1);
         TRYCR(cond->else_branch, ALLOC(sizeof(core_expr_t)), NULL, -1);
 
-        TRY(res, coregen_from_ast(if_ast->cond, env, cond->cond, allocator));
-        TRY(res, coregen_from_ast(if_ast->then_branch, env, cond->then_branch,
-                                  allocator));
-        TRY(res, coregen_from_ast(if_ast->else_branch, env, cond->else_branch,
-                                  allocator));
+        TRY(res, coregen_from_ast(if_ast->cond, env, cond->cond));
+        TRY(res, coregen_from_ast(if_ast->then_branch, env, cond->then_branch));
+        TRY(res, coregen_from_ast(if_ast->else_branch, env, cond->else_branch));
 
         break;
     }

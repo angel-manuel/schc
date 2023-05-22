@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #include <data/vector.h>
@@ -15,35 +16,25 @@
 #define REALLOC(ptr, size) ALLOCATOR_REALLOC(hashmap->allocator, (ptr), (size))
 #define FREE(mem) ALLOCATOR_FREE(hashmap->allocator, (mem))
 
-typedef struct hashmap_location_ {
-    char *key;
-    unsigned char data[0];
-} hashmap_location_t;
-
-hashmap_location_t *hashmap_get_entry(hashmap_t *hashmap, size_t i, void *mem);
 int hashmap_grow(hashmap_t *hashmap);
 uint64_t hash(const char *str);
 
-int hashmap_init(hashmap_t *hashmap, size_t elem_size,
-                 void (*elem_destroy)(void *)) {
+int hashmap_init(hashmap_t *hashmap, size_t elem_size) {
     assert(hashmap != NULL);
     assert(elem_size >= 0);
 
-    return hashmap_init_with_cap(hashmap, elem_size, HASHMAP_DEFAULT_CAP,
-                                 elem_destroy);
+    return hashmap_init_with_cap(hashmap, elem_size, HASHMAP_DEFAULT_CAP);
 }
 
 int hashmap_init_with_cap(hashmap_t *hashmap, size_t elem_size,
-                          size_t initial_capacity,
-                          void (*elem_destroy)(void *)) {
+                          size_t initial_capacity) {
     return hashmap_init_with_cap_and_allocator(
-        hashmap, elem_size, initial_capacity, &default_allocator, elem_destroy);
+        hashmap, elem_size, initial_capacity, &default_allocator);
 }
 
 int hashmap_init_with_cap_and_allocator(hashmap_t *hashmap, size_t elem_size,
                                         size_t initial_capacity,
-                                        allocator_t *allocator,
-                                        void (*elem_destroy)(void *)) {
+                                        allocator_t *allocator) {
 
     assert(hashmap != NULL);
     assert(elem_size >= 0);
@@ -63,7 +54,6 @@ int hashmap_init_with_cap_and_allocator(hashmap_t *hashmap, size_t elem_size,
     hashmap->cap = cap;
     hashmap->elem_size = elem_size;
     hashmap->cap_pow = cap_pow;
-    hashmap->elem_destroy = elem_destroy;
 
     TRYCR(hashmap->mem, ALLOC(cap * (sizeof(hashmap_location_t) + elem_size)),
           NULL, -1);
@@ -87,10 +77,6 @@ void hashmap_destroy(hashmap_t *hashmap) {
 
         if (loc != NULL && loc->key != NULL) {
             FREE(loc->key);
-
-            if (hashmap->elem_destroy) {
-                hashmap->elem_destroy(&loc->data);
-            }
         }
     }
 

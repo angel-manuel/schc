@@ -10,6 +10,7 @@
 
 typedef struct env_ {
     struct env_ *upper_scope;
+    allocator_t *allocator;
     hashmap_t /* core_expr_t* */ scope;
 } env_t;
 

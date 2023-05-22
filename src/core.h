@@ -13,7 +13,7 @@ typedef struct core_expr_ core_expr_t;
 #include "env.h"
 
 int core_print(const core_expr_t *expr, FILE *fp);
-void core_destroy(core_expr_t *expr);
+void core_destroy(core_expr_t *expr, allocator_t *allocator);
 
 typedef enum core_expr_form_ {
     CORE_NO_FORM = 0,
