@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/schc",
             "args": [
-                "inputs/Test.hs"
+                "inputs/Data.hs"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

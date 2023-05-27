@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../util.h"
+
 #define VECTOR_DEFAULT_INITIAL_CAP 4
 
 #define VALLOC(size) ALLOCATOR_ALLOC(vector->allocator, (size))
@@ -12,6 +14,10 @@
 
 int vector_init(vector_t *vector, size_t elem_size) {
     return vector_init_with_cap(vector, elem_size, VECTOR_DEFAULT_INITIAL_CAP);
+}
+
+int vector_init_empty(vector_t *vector, size_t elem_size) {
+    return vector_init_with_cap(vector, elem_size, 0);
 }
 
 int vector_init_with_cap(vector_t *vector, size_t elem_size,
@@ -42,9 +48,11 @@ int vector_init_with_cap_and_allocator(vector_t *vector, size_t elem_size,
     vector->elem_size = elem_size;
     vector->len = 0;
     vector->cap = initial_capacity;
-    vector->mem = VALLOC(elem_size * initial_capacity);
-    if (vector->mem == NULL) {
-        return -1;
+
+    if (initial_capacity > 0) {
+        TRYCR(vector->mem, VALLOC(elem_size * initial_capacity), NULL, -1);
+    } else {
+        vector->mem = NULL;
     }
 
     return 0;
@@ -52,9 +60,10 @@ int vector_init_with_cap_and_allocator(vector_t *vector, size_t elem_size,
 
 void vector_destroy(vector_t *vector) {
     assert(vector != NULL);
-    assert(vector->mem != NULL);
 
-    VFREE(vector->mem);
+    if (vector->mem != NULL) {
+        VFREE(vector->mem);
+    }
 }
 
 void *vector_get_mem(vector_t *vector) {
@@ -83,7 +92,6 @@ size_t vector_get_len(const vector_t *vector) {
 
 void *vector_alloc_elem(vector_t *vector) {
     assert(vector != NULL);
-    assert(vector->mem != NULL);
 
     if (vector->len >= vector->cap) {
         if (vector_grow(vector)) {

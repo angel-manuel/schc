@@ -81,7 +81,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    ast_destroy(&ast);
+    ast_destroy(&ast, &parser_allocator);
     linalloc_destroy(&parser_linalloc);
 
     puts("EXPRs:");

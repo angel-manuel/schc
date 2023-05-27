@@ -77,6 +77,10 @@ void *linalloc_realloc(linalloc_t *linalloc, void *ptr, size_t size) {
     assert(linalloc != NULL);
     assert(size > 0);
 
+    if (ptr == NULL) {
+        return linalloc_alloc(linalloc, size);
+    }
+
     size += sizeof(size_t);
 
     size_t old_size = *((size_t *)ptr - 1);
