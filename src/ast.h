@@ -36,6 +36,9 @@ typedef enum ast_rule_ {
     AST_VAL_DECL,
     AST_MODULE,
     AST_BODY,
+    AST_DATA_CONSTRUCTOR,
+    AST_TYPE,
+    AST_TYPEVAR,
 } ast_rule_t;
 
 struct ast_;
@@ -133,6 +136,25 @@ typedef struct ast_has_type_decl_ {
     ast_t *type_exp;
 } ast_has_type_decl_t;
 
+typedef struct ast_data_decl_ {
+    char *data_name;
+    vector_t /*ast_t*/ constructors;
+} ast_data_decl_t;
+
+typedef struct ast_data_constructor_ {
+    char *constructor_name;
+    vector_t /*ast_t*/ types;
+} ast_data_constructor_t;
+
+typedef struct ast_typevar_ {
+    char *tyvar;
+} ast_typevar_t;
+
+typedef struct ast_type_ {
+    char *tycon;
+    vector_t /*ast_t*/ args;
+} ast_type_t;
+
 struct ast_ {
     ast_rule_t rule;
     union {
@@ -151,6 +173,10 @@ struct ast_ {
         ast_fn_decl_t fn_decl;
         ast_val_decl_t val_decl;
         ast_has_type_decl_t has_type_decl;
+        ast_data_decl_t data_decl;
+        ast_data_constructor_t data_constructor;
+        ast_type_t type;
+        ast_typevar_t typevar;
     };
 };
 

@@ -173,6 +173,52 @@ void ast_destroy(ast_t *node, allocator_t *allocator) {
 
         break;
     }
+    case AST_DATA_DECL: {
+        ast_data_decl_t *data_decl = &node->data_decl;
+
+        FREE(data_decl->data_name);
+
+        for (int i = 0; i < data_decl->constructors.len; ++i) {
+            ast_destroy((ast_t *)vector_get_ref(&data_decl->constructors, i),
+                        allocator);
+        }
+        vector_destroy(&data_decl->constructors);
+
+        break;
+    }
+    case AST_DATA_CONSTRUCTOR: {
+        ast_data_constructor_t *data_constr = &node->data_constructor;
+
+        FREE(data_constr->constructor_name);
+
+        for (int i = 0; i < data_constr->types.len; ++i) {
+            ast_destroy((ast_t *)vector_get_ref(&data_constr->types, i),
+                        allocator);
+        }
+        vector_destroy(&data_constr->types);
+
+        break;
+    }
+    case AST_TYPE: {
+        ast_type_t *type_node = &node->type;
+
+        FREE(type_node->tycon);
+
+        for (int i = 0; i < type_node->args.len; ++i) {
+            ast_destroy((ast_t *)vector_get_ref(&type_node->args, i),
+                        allocator);
+        }
+        vector_destroy(&type_node->args);
+
+        break;
+    }
+    case AST_TYPEVAR: {
+        ast_typevar_t *typevar = &node->typevar;
+
+        FREE(typevar->tyvar);
+
+        break;
+    }
     default:
         break;
     }
@@ -387,6 +433,57 @@ void ast_print_indent(const ast_t *node, FILE *fp, int indent) {
         ast_print_indent(has_type_decl->type_exp, fp, indent + INDENT);
         fprintf(fp, "\n%*s}\n", indent + FINDENT, "");
         fprintf(fp, "%*s}", indent, "");
+        break;
+    }
+    case AST_DATA_DECL: {
+        const ast_data_decl_t *data_decl = &node->data_decl;
+
+        fprintf(fp, "%*sDATA_DECL {\n", indent, "");
+        fprintf(fp, "%*sdata_name = %s\n", indent + FINDENT, "",
+                data_decl->data_name);
+        fprintf(fp, "%*sconstructors = ", indent + FINDENT, "");
+        ast_print_vec_indent(&data_decl->constructors, fp, indent + INDENT);
+        fprintf(fp, "\n%*s]\n", indent + FINDENT, "");
+        fprintf(fp, "%*s}", indent, "");
+        break;
+    }
+    case AST_DATA_CONSTRUCTOR: {
+        const ast_data_constructor_t *data_constr = &node->data_constructor;
+
+        fprintf(fp, "%*sDATA_CONSTRUCTOR {\n", indent, "");
+        fprintf(fp, "%*sconstructor_name = %s\n", indent + FINDENT, "",
+                data_constr->constructor_name);
+        if (data_constr->types.len != 0) {
+            fprintf(fp, "%*stypes = ", indent + FINDENT, "");
+            ast_print_vec_indent(&data_constr->types, fp, indent + INDENT);
+            fprintf(fp, "\n%*s]\n", indent + FINDENT, "");
+        }
+        fprintf(fp, "%*s}", indent, "");
+
+        break;
+    }
+    case AST_TYPE: {
+        const ast_type_t *type_node = &node->type;
+
+        if (type_node->args.len == 0) {
+            fprintf(fp, "%*sTYPE { tyvar = %s }", indent, "", type_node->tycon);
+        } else {
+            fprintf(fp, "%*sTYPE {\n", indent, "");
+            fprintf(fp, "%*stycon = %s\n", indent + FINDENT, "",
+                    type_node->tycon);
+
+            fprintf(fp, "%*sargs = ", indent + FINDENT, "");
+            ast_print_vec_indent(&type_node->args, fp, indent + INDENT);
+            fprintf(fp, "\n%*s]\n", indent + FINDENT, "");
+            fprintf(fp, "%*s}", indent, "");
+        }
+
+        break;
+    }
+    case AST_TYPEVAR: {
+        const ast_typevar_t *typevar = &node->typevar;
+
+        fprintf(fp, "%*sTYPEVAR { tyvar = %s }\n", indent, "", typevar->tyvar);
         break;
     }
     default:

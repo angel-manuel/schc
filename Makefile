@@ -1,5 +1,5 @@
-CC = clang
-CFLAGS = -Wall -Werror -Wfatal-errors -std=c99 -Isrc
+CC = gcc
+CFLAGS = -Wall -Werror -Wfatal-errors -std=c99 -Isrc -g
 CFLAGS_FLEX = -std=c99 -D_POSIX_SOURCE
 SOURCES = $(filter-out src/schc.c, $(wildcard src/*.c src/**/*.c))
 OBJECTS = $(patsubst src/%.c, build/%.o, $(SOURCES)) build/gen_lexer.o

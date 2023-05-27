@@ -16,7 +16,8 @@
 #define PFREE(mem) ALLOCATOR_FREE(parser->allocator, (mem))
 
 #define PFAIL(fail)                                                            \
-    fprintf(stderr, "Parser FAIL(%s:%d): %s\n", __FILE__, __LINE__, fail);
+    fprintf(stderr, "Parser FAIL(%s:%d): %s, got %s\n", __FILE__, __LINE__,    \
+            fail, strtoken(parser->token));
 
 #define TRYP(res, exp)                                                         \
     do {                                                                       \
@@ -45,6 +46,8 @@ int declaration(parser_t *parser, ast_t *node);
 int function(parser_t *parser, char *decl_name, ast_t *node);
 int value(parser_t *parser, char *decl_name, ast_t *node);
 int has_type(parser_t *parser, char *decl_name, ast_t *node);
+int data(parser_t *parser, ast_t *node);
+int data_constructor(parser_t *parser, ast_t *node);
 
 int identable(parser_t *parser, vector_t /*ast_t*/ *nodes,
               int (*element_parser)(parser_t *, ast_t *));
@@ -60,6 +63,9 @@ int do_exp(parser_t *parser, ast_t *node);
 int do_let_exp(parser_t *parser, ast_t *node);
 int var(parser_t *parser, ast_t *node);
 int con(parser_t *parser, ast_t *node);
+int atype(parser_t *parser, ast_t *node);
+int btype(parser_t *parser, ast_t *node);
+int type(parser_t *parser, ast_t *node);
 
 int lit(parser_t *parser, ast_t *node);
 int number(parser_t *parser, ast_t *node);
@@ -384,13 +390,26 @@ int declaration(parser_t *parser, ast_t *node) {
 
     int res;
 
-    TRYP(res, soft(accept(parser, TOK_VARID)));
+    TRYP(res, soft(accept(parser, TOK_VARID)) | soft(accept(parser, TOK_DATA)));
 
-    char *decl_name = parser_get_text(parser);
+    switch (res) {
+    case TOK_VARID: {
+        char *decl_name = parser_get_text(parser);
 
-    TRYP(res, hard(function(parser, decl_name, node) ||
-                   value(parser, decl_name, node) ||
-                   has_type(parser, decl_name, node)));
+        TRYP(res, hard(function(parser, decl_name, node) ||
+                       value(parser, decl_name, node) ||
+                       has_type(parser, decl_name, node)));
+        break;
+    }
+    case TOK_DATA: {
+        TRYP(res, hard(data(parser, node)));
+
+        break;
+    }
+    default:
+        PFAIL("Expected declaration");
+        return -1;
+    }
 
     return res;
 }
@@ -500,6 +519,74 @@ int has_type(parser_t *parser, char *decl_name, ast_t *node) {
     TRYP(res, expression(parser, has_type_decl->type_exp));
 
     node->rule = AST_HAS_TYPE_DECL;
+    return res;
+}
+
+int data(parser_t *parser, ast_t *node) {
+    assert(parser != NULL);
+    assert(node != NULL);
+
+    int res;
+
+    ast_data_decl_t *data_decl = &node->data_decl;
+
+    TRYP(res, hard(accept(parser, TOK_CONID)));
+
+    data_decl->data_name = parser_get_text(parser);
+
+    TRYP(res, hard(accept(parser, '=')));
+
+    TRY(res, vector_init_with_allocator(&data_decl->constructors, sizeof(ast_t),
+                                        parser->allocator));
+
+    open_indent(parser);
+
+    while (res != TOK_NO_TOK) {
+        ast_t *new_node;
+        TRYCR(new_node, (ast_t *)vector_alloc_elem(&data_decl->constructors),
+              NULL, -1);
+        TRYP(res, data_constructor(parser, new_node));
+        TRYP(res, maybe(soft(accept(parser, '|'))));
+    }
+
+    close_indent(parser);
+
+    res = ')';
+    node->rule = AST_DATA_DECL;
+    return res;
+}
+
+int data_constructor(parser_t *parser, ast_t *node) {
+    assert(parser != NULL);
+    assert(node != NULL);
+
+    int res;
+    void *resptr;
+
+    TRYP(res, hard(accept(parser, TOK_CONID)));
+
+    ast_data_constructor_t *data_constr = &node->data_constructor;
+
+    data_constr->constructor_name = parser_get_text(parser);
+
+    TRY(res, vector_init_with_cap_and_allocator(
+                 &data_constr->types, sizeof(ast_t), 0, parser->allocator));
+
+    for (;;) {
+        ast_t type_arg;
+
+        TRYP(res, maybe(atype(parser, &type_arg)));
+
+        if (res == TOK_NO_TOK) {
+            res = ')';
+            break;
+        }
+
+        TRYCR(resptr, vector_push_back(&data_constr->types, &type_arg), NULL,
+              -1);
+    }
+
+    node->rule = AST_DATA_CONSTRUCTOR;
     return res;
 }
 
@@ -749,6 +836,147 @@ int con(parser_t *parser, ast_t *node) {
     node->con.name = parser_get_text(parser);
 
     node->rule = AST_CON;
+    return res;
+}
+
+int atype(parser_t *parser, ast_t *node) {
+    assert(parser != NULL);
+    assert(node != NULL);
+
+    int res;
+    void *resptr;
+
+    TRYP(res, soft(accept(parser, TOK_VARID)) |     // tyvar
+                  soft(accept(parser, TOK_CONID)) | // type con
+                  soft(accept(parser, '(')) |       // tuple
+                  soft(accept(parser, '['))         // list
+    );
+
+    switch (res) {
+    case TOK_VARID: {
+        ast_typevar_t *typevar = &node->typevar;
+        typevar->tyvar = parser_get_text(parser);
+        node->rule = AST_TYPEVAR;
+        break;
+    }
+    case TOK_CONID: {
+        ast_type_t *type_node = &node->type;
+        type_node->tycon = parser_get_text(parser);
+
+        TRY(res, vector_init_with_cap_and_allocator(
+                     &type_node->args, sizeof(ast_t), 0, parser->allocator));
+        res = ')';
+
+        node->rule = AST_TYPE;
+        break;
+    }
+    case '[': {
+        ast_type_t *type_node = &node->type;
+        TRYCR(type_node->tycon, PSTRALLOC("[]"), NULL, -1);
+
+        TRY(res, vector_init_with_cap_and_allocator(
+                     &type_node->args, sizeof(ast_t), 1, parser->allocator));
+
+        ast_t *elem_type;
+        TRYCR(elem_type, vector_alloc_elem(&type_node->args), NULL, -1);
+        TRYP(res, type(parser, elem_type));
+
+        TRYP(res, accept(parser, ']'));
+        node->rule = AST_TYPE;
+        break;
+    }
+    case '(': {
+        ast_type_t *type_node = &node->type;
+        ast_t first_type;
+
+        TRYP(res, type(parser, &first_type));
+
+        TRYP(res, maybe(accept(parser, ',')));
+        if (res == ',') {
+            TRYCR(type_node->tycon, PSTRALLOC("()"), NULL, -1);
+            TRY(res, vector_init_with_allocator(&type_node->args, sizeof(ast_t),
+                                                parser->allocator));
+            TRYCR(resptr, vector_push_back(&type_node->args, &first_type), NULL,
+                  -1);
+
+            do {
+                ast_t *next_type;
+                TRYCR(next_type, vector_alloc_elem(&type_node->args), NULL, -1);
+
+                TRYP(res, type(parser, next_type));
+                TRYP(res, maybe(accept(parser, ',')));
+            } while (res != TOK_NO_TOK);
+        } else {
+            memcpy(node, &first_type, sizeof(ast_t));
+        }
+
+        TRYP(res, accept(parser, ')'));
+        node->rule = AST_TYPE;
+        break;
+    }
+    }
+
+    return res;
+}
+
+int btype(parser_t *parser, ast_t *node) {
+    assert(parser != NULL);
+    assert(node != NULL);
+
+    int res;
+    void *resptr;
+
+    TRYP(res, atype(parser, node));
+
+    ast_type_t *type_node = &node->type;
+
+    for (;;) {
+        ast_t type_arg;
+
+        TRYP(res, maybe(atype(parser, &type_arg)));
+
+        if (res == TOK_NO_TOK) {
+            res = ')';
+            break;
+        }
+
+        TRYCR(resptr, vector_push_back(&type_node->args, &type_arg), NULL, -1);
+    }
+
+    return res;
+}
+
+int type(parser_t *parser, ast_t *node) {
+    assert(parser != NULL);
+    assert(node != NULL);
+
+    int res;
+    void *resptr;
+
+    TRYP(res, btype(parser, node));
+
+    TRYP(res, maybe(accept(parser, TOK_OP_L_ARROW))); // ->
+
+    if (res != TOK_NO_TOK) {
+        ast_t lhs;
+
+        memcpy(&lhs, node, sizeof(ast_t));
+
+        ast_type_t *node_type = &node->type;
+
+        TRYCR(node_type->tycon, PSTRALLOC("->"), NULL, -1);
+        TRY(res, vector_init_with_cap_and_allocator(
+                     &node_type->args, sizeof(ast_t), 2, parser->allocator));
+        TRYCR(resptr, vector_push_back(&node_type->args, &lhs), NULL, -1);
+
+        ast_t *rhs;
+        TRYCR(rhs, vector_alloc_elem(&node_type->args), NULL, -1);
+
+        TRYP(res, type(parser, rhs));
+    } else {
+        res = ')';
+    }
+
     return res;
 }
 
