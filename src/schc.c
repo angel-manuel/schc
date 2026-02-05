@@ -72,16 +72,16 @@ int main(int argc, char *argv[]) {
     env_init_with_allocator(&env, &core_allocator);
     env_init_with_allocator(&intrinsics_env, &core_allocator);
 
-    intrinsics_load(&intrinsics_env, &linalloc);
+    intrinsics_load(&intrinsics_env);
     env.upper_scope = &intrinsics_env;
 
-    if (coregen_from_module_ast(&ast, &env, &core_allocator) == -1) {
+    if (coregen_from_module_ast(&ast, &env) == -1) {
         fprintf(stderr, "Coregen error\n");
         fclose(input);
         return 1;
     }
 
-    ast_destroy(&ast);
+    ast_destroy(&ast, &parser_allocator);
     linalloc_destroy(&parser_linalloc);
 
     puts("EXPRs:");
