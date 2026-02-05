@@ -32,7 +32,13 @@ int codegen_init(codegen_ctx_t *ctx, FILE *output) {
     ctx->temp_counter = 0;
     ctx->indent = 0;
     ctx->current_env = NULL;
+    ctx->anon_counter = 0;
+    vector_init(&ctx->anon_lambdas, sizeof(anon_lambda_t));
     return 0;
+}
+
+void codegen_destroy(codegen_ctx_t *ctx) {
+    vector_destroy(&ctx->anon_lambdas);
 }
 
 // Get the runtime function name for an intrinsic
@@ -45,12 +51,16 @@ static const char *intrinsic_to_runtime(const char *name) {
     if (strcmp(name, "gte") == 0) return "schc_gte";
     if (strcmp(name, "lte") == 0) return "schc_lte";
     if (strcmp(name, "eq") == 0) return "schc_eq";
+    if (strcmp(name, "putStrLn") == 0) return "schc_putStrLn";
+    if (strcmp(name, "show") == 0) return "schc_show";
     return NULL;
 }
 
 // Get the arity of an intrinsic
 static int intrinsic_arity(const char *name) {
     if (strcmp(name, "neg") == 0) return 1;
+    if (strcmp(name, "putStrLn") == 0) return 1;
+    if (strcmp(name, "show") == 0) return 1;
     // All others are binary
     return 2;
 }
@@ -103,6 +113,49 @@ static int is_saturated_intrinsic(const core_expr_t *expr,
     return 0;
 }
 
+// Recursively collect all inline lambdas from an expression
+static void collect_inline_lambdas(codegen_ctx_t *ctx, const core_expr_t *expr) {
+    if (!expr) return;
+
+    switch (expr->form) {
+    case CORE_LAMBDA: {
+        // This is an inline lambda - add it to our collection
+        anon_lambda_t anon;
+        anon.expr = expr;
+        anon.id = ctx->anon_counter++;
+        vector_push_back(&ctx->anon_lambdas, &anon);
+        // Also collect from the lambda body
+        collect_inline_lambdas(ctx, expr->lambda.body);
+        break;
+    }
+    case CORE_APPL:
+        collect_inline_lambdas(ctx, expr->appl.fn);
+        collect_inline_lambdas(ctx, expr->appl.arg);
+        break;
+    case CORE_COND:
+        collect_inline_lambdas(ctx, expr->cond.cond);
+        collect_inline_lambdas(ctx, expr->cond.then_branch);
+        collect_inline_lambdas(ctx, expr->cond.else_branch);
+        break;
+    case CORE_INDIR:
+        // Don't recurse into indirections to avoid infinite loops
+        break;
+    default:
+        break;
+    }
+}
+
+// Find the anonymous lambda ID for a given lambda expression
+static int find_anon_lambda_id(codegen_ctx_t *ctx, const core_expr_t *expr) {
+    for (size_t i = 0; i < ctx->anon_lambdas.len; i++) {
+        anon_lambda_t *anon = (anon_lambda_t *)vector_get_ref(&ctx->anon_lambdas, i);
+        if (anon->expr == expr) {
+            return anon->id;
+        }
+    }
+    return -1;
+}
+
 // Emit code to evaluate an expression into a temporary variable
 static int codegen_emit_expr(codegen_ctx_t *ctx, const core_expr_t *expr,
                              const char *result_var) {
@@ -111,8 +164,27 @@ static int codegen_emit_expr(codegen_ctx_t *ctx, const core_expr_t *expr,
     switch (expr->form) {
     case CORE_LITERAL: {
         emit_indent(ctx);
-        fprintf(out, "schc_val_t *%s = schc_alloc_int(%ldLL);\n", result_var,
-                expr->literal.i64);
+        switch (expr->literal.type) {
+        case CORE_LITERAL_I64:
+            fprintf(out, "schc_val_t *%s = schc_alloc_int(%ldLL);\n", result_var,
+                    expr->literal.i64);
+            break;
+        case CORE_LITERAL_STR:
+            fprintf(out, "schc_val_t *%s = schc_alloc_str(\"", result_var);
+            // Escape the string
+            for (const char *p = expr->literal.str; *p; p++) {
+                switch (*p) {
+                case '\n': fprintf(out, "\\n"); break;
+                case '\r': fprintf(out, "\\r"); break;
+                case '\t': fprintf(out, "\\t"); break;
+                case '\\': fprintf(out, "\\\\"); break;
+                case '"': fprintf(out, "\\\""); break;
+                default: fputc(*p, out);
+                }
+            }
+            fprintf(out, "\");\n");
+            break;
+        }
         break;
     }
 
@@ -235,10 +307,18 @@ static int codegen_emit_expr(codegen_ctx_t *ctx, const core_expr_t *expr,
     }
 
     case CORE_LAMBDA: {
-        // Lambda should have been hoisted - this is a closure reference
-        emit_indent(ctx);
-        fprintf(out, "// Inline lambda not supported yet\n");
-        fprintf(out, "schc_val_t *%s = NULL;\n", result_var);
+        // Inline lambda - reference the pre-collected anonymous function
+        int anon_id = find_anon_lambda_id(ctx, expr);
+        if (anon_id >= 0) {
+            int arity = codegen_count_lambda_args(expr);
+            emit_indent(ctx);
+            fprintf(out, "schc_val_t *%s = schc_alloc_closure((void*)schc_anon_%d_impl, %d);\n",
+                    result_var, anon_id, arity);
+        } else {
+            emit_indent(ctx);
+            fprintf(out, "// ERROR: inline lambda not found\n");
+            fprintf(out, "schc_val_t *%s = NULL;\n", result_var);
+        }
         break;
     }
 
@@ -312,22 +392,68 @@ static int codegen_emit_function(codegen_ctx_t *ctx, const char *name,
     return 0;
 }
 
+// Emit implementation for an anonymous lambda
+static int codegen_emit_anon_lambda(codegen_ctx_t *ctx, int anon_id,
+                                    const core_expr_t *expr) {
+    if (expr->form != CORE_LAMBDA) return -1;
+
+    FILE *out = ctx->output;
+
+    // Get argument names
+    vector_t arg_names;
+    vector_init(&arg_names, sizeof(const char *));
+    env_list_scope(&expr->lambda.args, &arg_names, 0);
+
+    // Emit function signature
+    fprintf(out, "schc_val_t *schc_anon_%d_impl(", anon_id);
+
+    for (size_t i = 0; i < arg_names.len; i++) {
+        if (i > 0) fprintf(out, ", ");
+        const char *arg_name = *(const char **)vector_get_ref(&arg_names, i);
+        fprintf(out, "schc_val_t *schc_");
+        emit_sanitized_name(out, arg_name);
+    }
+    fprintf(out, ") {\n");
+
+    // Emit body
+    ctx->indent = 1;
+    char result_var[32];
+    snprintf(result_var, 32, "_result");
+    codegen_emit_expr(ctx, expr->lambda.body, result_var);
+
+    emit_indent(ctx);
+    fprintf(out, "return %s;\n", result_var);
+    fprintf(out, "}\n\n");
+
+    vector_destroy(&arg_names);
+    return 0;
+}
+
 // Emit the complete program
 int codegen_emit_program(codegen_ctx_t *ctx, const env_t *env) {
     FILE *out = ctx->output;
     ctx->current_env = env;
-
-    // Header
-    fprintf(out, "// Generated by SCHC\n");
-    fprintf(out, "#include \"runtime/runtime.h\"\n");
-    fprintf(out, "#include <stdio.h>\n\n");
 
     // Get all top-level definitions
     vector_t names;
     vector_init(&names, sizeof(const char *));
     env_list_scope(env, &names, 0);
 
-    // Forward declarations for all functions
+    // Pre-pass: collect all inline lambdas from all expressions
+    for (size_t i = 0; i < names.len; i++) {
+        const char *name = *(const char **)vector_get_ref(&names, i);
+        const core_expr_t *expr = env_get_expr((env_t *)env, name);
+        if (expr) {
+            collect_inline_lambdas(ctx, expr);
+        }
+    }
+
+    // Header
+    fprintf(out, "// Generated by SCHC\n");
+    fprintf(out, "#include \"runtime/runtime.h\"\n");
+    fprintf(out, "#include <stdio.h>\n\n");
+
+    // Forward declarations for all named functions
     fprintf(out, "// Forward declarations\n");
     for (size_t i = 0; i < names.len; i++) {
         const char *name = *(const char **)vector_get_ref(&names, i);
@@ -344,6 +470,18 @@ int codegen_emit_program(codegen_ctx_t *ctx, const env_t *env) {
             }
             fprintf(out, ");\n");
         }
+    }
+
+    // Forward declarations for anonymous lambdas
+    for (size_t i = 0; i < ctx->anon_lambdas.len; i++) {
+        anon_lambda_t *anon = (anon_lambda_t *)vector_get_ref(&ctx->anon_lambdas, i);
+        int arity = codegen_count_lambda_args(anon->expr);
+        fprintf(out, "schc_val_t *schc_anon_%d_impl(", anon->id);
+        for (int j = 0; j < arity; j++) {
+            if (j > 0) fprintf(out, ", ");
+            fprintf(out, "schc_val_t *");
+        }
+        fprintf(out, ");\n");
     }
     fprintf(out, "\n");
 
@@ -370,6 +508,13 @@ int codegen_emit_program(codegen_ctx_t *ctx, const env_t *env) {
         if (expr && expr->form == CORE_LAMBDA) {
             codegen_emit_function(ctx, name, expr);
         }
+    }
+
+    // Anonymous lambda implementations
+    fprintf(out, "// Anonymous lambda implementations\n");
+    for (size_t i = 0; i < ctx->anon_lambdas.len; i++) {
+        anon_lambda_t *anon = (anon_lambda_t *)vector_get_ref(&ctx->anon_lambdas, i);
+        codegen_emit_anon_lambda(ctx, anon->id, anon->expr);
     }
 
     // Initialization function
@@ -400,8 +545,11 @@ int codegen_emit_program(codegen_ctx_t *ctx, const env_t *env) {
     if (main_expr) {
         ctx->indent = 1;
         codegen_emit_expr(ctx, main_expr, "_main_result");
-        fprintf(out, "    schc_print_val(_main_result);\n");
-        fprintf(out, "    printf(\"\\n\");\n");
+        // Print result unless it's unit (int 0 from IO actions)
+        fprintf(out, "    if (!(_main_result->tag == SCHC_VAL_INT && _main_result->i64 == 0)) {\n");
+        fprintf(out, "        schc_print_val(_main_result);\n");
+        fprintf(out, "        printf(\"\\n\");\n");
+        fprintf(out, "    }\n");
     } else {
         fprintf(out, "    printf(\"No main defined\\n\");\n");
     }

@@ -13,6 +13,13 @@ schc_val_t *schc_alloc_int(int64_t v) {
     return val;
 }
 
+schc_val_t *schc_alloc_str(const char *s) {
+    schc_val_t *val = malloc(sizeof(schc_val_t));
+    val->tag = SCHC_VAL_STR;
+    val->str = s;  // Note: doesn't copy, assumes string is static or managed
+    return val;
+}
+
 schc_val_t *schc_alloc_closure(void *fn_ptr, int arity) {
     schc_val_t *val = malloc(sizeof(schc_val_t));
     val->tag = SCHC_VAL_CLOSURE;
@@ -204,12 +211,45 @@ schc_val_t *schc_eq(schc_val_t *a, schc_val_t *b) {
     return schc_alloc_int(a->i64 == b->i64 ? 1 : 0);
 }
 
+// Intrinsics - IO
+
+schc_val_t *schc_putStrLn(schc_val_t *s) {
+    if (s->tag != SCHC_VAL_STR) {
+        fprintf(stderr, "Runtime error: putStrLn on non-string\n");
+        exit(1);
+    }
+    puts(s->str);
+    // Return unit (represented as 0 for now)
+    return schc_alloc_int(0);
+}
+
+schc_val_t *schc_show(schc_val_t *v) {
+    char buf[64];
+    switch (v->tag) {
+    case SCHC_VAL_INT:
+        snprintf(buf, sizeof(buf), "%ld", v->i64);
+        // Need to allocate a copy since buf is on stack
+        {
+            char *copy = malloc(strlen(buf) + 1);
+            strcpy(copy, buf);
+            return schc_alloc_str(copy);
+        }
+    case SCHC_VAL_STR:
+        return v;  // Strings show as themselves
+    default:
+        return schc_alloc_str("<value>");
+    }
+}
+
 // Debug
 
 void schc_print_val(schc_val_t *v) {
     switch (v->tag) {
     case SCHC_VAL_INT:
         printf("%ld", v->i64);
+        break;
+    case SCHC_VAL_STR:
+        printf("%s", v->str);
         break;
     case SCHC_VAL_CLOSURE:
         printf("<closure arity=%d applied=%d>", v->closure.arity,

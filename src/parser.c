@@ -52,6 +52,7 @@ int fexpression(parser_t *parser, ast_t *node);
 int aexpression(parser_t *parser, ast_t *node);
 int let_exp(parser_t *parser, ast_t *node);
 int if_exp(parser_t *parser, ast_t *node);
+int lambda_exp(parser_t *parser, ast_t *node);
 int do_step(parser_t *parser, ast_t *node);
 int do_exp(parser_t *parser, ast_t *node);
 int do_let_exp(parser_t *parser, ast_t *node);
@@ -103,7 +104,8 @@ int parser_parse(parser_t *parser, ast_t *root, allocator_t *allocator) {
 
     int res = module(parser, root);
 
-    parser->allocator = NULL;
+    // Note: allocator is kept set so parser_destroy can cleanup ptext
+    // parser->allocator will be invalidated after parser_allocator is destroyed
 
     if (res == -1) {
         return -1;
@@ -516,7 +518,8 @@ int expression(parser_t *parser, ast_t *node) {
     int res, tmp;
 
     TRYP(res, let_exp(parser, node) || if_exp(parser, node) ||
-                  do_exp(parser, node) || fexpression(parser, node));
+                  do_exp(parser, node) || lambda_exp(parser, node) ||
+                  fexpression(parser, node));
 
     TRYP(tmp, maybe(operator(parser)));
     if (tmp != TOK_NO_TOK) {
@@ -588,6 +591,40 @@ int if_exp(parser_t *parser, ast_t *node) {
     TRYP(res, expression(parser, if_expr->else_branch));
 
     node->rule = AST_IF;
+    return res;
+}
+
+// Lambda expression: \x y z -> body
+int lambda_exp(parser_t *parser, ast_t *node) {
+    assert(parser != NULL);
+    assert(node != NULL);
+
+    int res;
+
+    TRYP(res, soft(accept(parser, '\\')));
+
+    ast_lambda_t *lambda = &node->lambda;
+
+    TRY(res, vector_init_with_allocator(&lambda->vars, sizeof(char *),
+                                        parser->allocator));
+
+    // Accept first variable (required)
+    TRYP(res, accept(parser, TOK_VARID));
+
+    // Parse variable names until -> (same pattern as function args)
+    do {
+        char *var_name = parser_get_text(parser);
+        void *memres;
+        TRYCR(memres, vector_push_back(&lambda->vars, &var_name), NULL, -1);
+        TRY(res, maybe(soft(accept(parser, TOK_VARID))));
+    } while (res != TOK_NO_TOK);
+
+    TRYP(res, accept(parser, TOK_OP_R_ARROW));
+
+    TRYCR(lambda->body, (ast_t *)ALLOC(sizeof(ast_t)), NULL, -1);
+    TRYP(res, expression(parser, lambda->body));
+
+    node->rule = AST_LAMBDA;
     return res;
 }
 
@@ -779,6 +816,13 @@ int string(parser_t *parser, ast_t *node) {
 
     TRYP(res, soft(accept(parser, TOK_STRING)));
     char *str = parser_get_text(parser);
+
+    // Strip surrounding quotes by shifting content
+    size_t len = strlen(str);
+    if (len >= 2 && str[0] == '"' && str[len - 1] == '"') {
+        memmove(str, str + 1, len - 2);
+        str[len - 2] = '\0';
+    }
 
     ast_lit_t *lit = &node->lit;
     lit->lit_type = AST_LIT_TYPE_STR;

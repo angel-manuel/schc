@@ -292,6 +292,10 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr) {
             lit->type = CORE_LITERAL_I64;
             lit->i64 = lit_ast->int_lit;
             break;
+        case AST_LIT_TYPE_STR:
+            lit->type = CORE_LITERAL_STR;
+            lit->str = lit_ast->str_lit;
+            break;
         default:
             CGFAIL("Unrecognized literal type");
             ast_print(ast, stderr);
@@ -331,8 +335,34 @@ int coregen_from_ast(const ast_t *ast, env_t *env, core_expr_t *expr) {
 
         break;
     }
+    case AST_LAMBDA: {
+        const ast_lambda_t *lambda_ast = &ast->lambda;
+
+        expr->form = CORE_LAMBDA;
+        core_lambda_t *lambda = &expr->lambda;
+
+        TRY(res, env_init_with_allocator(&lambda->args, env->allocator));
+        lambda->args.upper_scope = env;
+
+        for (size_t i = 0; i < lambda_ast->vars.len; ++i) {
+            const char *varname =
+                *(const char **)vector_get_ref(&lambda_ast->vars, i);
+
+            core_expr_t var_expr;
+
+            var_expr.name = varname;
+            var_expr.form = CORE_PLACEHOLDER;
+
+            TRY(res, env_put_expr(&lambda->args, varname, &var_expr));
+        }
+
+        TRYCR(lambda->body, ALLOC(sizeof(core_expr_t)), NULL, -1);
+
+        TRY(res, coregen_from_ast(lambda_ast->body, &lambda->args, lambda->body));
+
+        break;
+    }
     case AST_EXP_HAS_TYPE:
-    case AST_LAMBDA:
     case AST_DO:
         CGFAIL("Not implemented");
         ast_print(ast, stderr);

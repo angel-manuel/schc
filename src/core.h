@@ -51,12 +51,14 @@ typedef struct core_lambda {
 
 typedef enum core_lit_type_ {
     CORE_LITERAL_I64,
+    CORE_LITERAL_STR,
 } core_lit_type_t;
 
 typedef struct core_literal_ {
     core_lit_type_t type;
     union {
         int64_t i64;
+        const char *str;
     };
 } core_literal_t;
 

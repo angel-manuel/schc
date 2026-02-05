@@ -112,6 +112,22 @@ void ast_destroy(ast_t *node, const allocator_t *allocator) {
 
         break;
     }
+    case AST_LAMBDA: {
+        ast_lambda_t *lambda = &node->lambda;
+
+        if (lambda->body != NULL) {
+            ast_destroy(lambda->body, allocator);
+            FREE(lambda->body);
+        }
+
+        for (size_t i = 0; i < lambda->vars.len; ++i) {
+            char *var = *(char **)vector_get_ref(&lambda->vars, i);
+            FREE(var);
+        }
+        vector_destroy(&lambda->vars);
+
+        break;
+    }
     case AST_VAR: {
         ast_var_t *var = &node->var;
 
@@ -319,6 +335,23 @@ void ast_print_indent(const ast_t *node, FILE *fp, int indent) {
 
         fprintf(fp, "%*s}", indent, "");
 
+        break;
+    }
+    case AST_LAMBDA: {
+        const ast_lambda_t *lambda = &node->lambda;
+
+        fprintf(fp, "%*sLAMBDA {\n", indent, "");
+        fprintf(fp, "%*svars = [", indent + FINDENT, "");
+        for (i = 0; i < lambda->vars.len; ++i) {
+            fprintf(fp, (i + 1 < lambda->vars.len) ? "%s " : "%s]\n",
+                    *((char **)vector_get_ref(&lambda->vars, i)));
+        }
+
+        fprintf(fp, "%*sbody = {\n", indent + FINDENT, "");
+        ast_print_indent(lambda->body, fp, indent + INDENT);
+        fprintf(fp, "\n%*s}\n", indent + FINDENT, "");
+
+        fprintf(fp, "%*s}", indent, "");
         break;
     }
     case AST_VAR:

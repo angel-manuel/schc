@@ -88,6 +88,11 @@ typedef struct ast_let_ {
     ast_t *body;
 } ast_let_t;
 
+typedef struct ast_lambda_ {
+    vector_t /*char* */ vars;
+    ast_t *body;
+} ast_lambda_t;
+
 typedef struct ast_var_ {
     char *name;
 } ast_var_t;
@@ -143,6 +148,7 @@ struct ast_ {
         ast_if_t if_exp;
         ast_do_t do_exp;
         ast_let_t let;
+        ast_lambda_t lambda;
         ast_var_t var;
         ast_con_t con;
         ast_lit_t lit;

@@ -165,6 +165,9 @@ int core_print_indent(const core_expr_t *expr, FILE *fp, int indent,
         case CORE_LITERAL_I64:
             TRYNEG(res, fprintf(fp, "%" PRIi64 "i64", literal->i64));
             break;
+        case CORE_LITERAL_STR:
+            TRYNEG(res, fprintf(fp, "\"%s\"", literal->str));
+            break;
         default:
             TRYNEG(res, fprintf(fp, "LITERAL { unknown }"));
         }
