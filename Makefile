@@ -31,11 +31,15 @@ schc: $(OBJECTS) build/schc.o
 
 .PHONY: dirs
 dirs:
-	@mkdir -p build
+	@mkdir -p build build/data build/intrinsics build/runtime
 
 .PHONY: clean
 clean:
 	rm -rf build schc $(TESTS)
+
+.PHONY: test-hs
+test-hs: build
+	./test_runner.sh
 
 build/gen_lexer.c: src/gen_lexer.l
 	flex -o $@ $^
